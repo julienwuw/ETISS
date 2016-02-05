@@ -1,0 +1,44 @@
+#include "etiss/Misc.h"
+#include "etiss/Plugin.h"
+#include "etiss/interfaces/Delegate.h"
+
+class or1ksimcpu : public etiss::CoroutinePlugin
+{
+
+public:
+    or1ksimcpu();
+    virtual ~or1ksimcpu();
+    virtual int32_t execute();
+    bool valid();
+
+    bool read(unsigned long int  addr,
+              unsigned char      mask[],
+              unsigned char      rdata[],
+              int                data_len);
+    bool write(unsigned long int  addr,
+              unsigned char      mask[],
+              unsigned char      wdata[],
+              int                data_len);
+
+protected:
+    inline std::string _getPluginName() const
+    {
+        return "or1ksimcpu";
+    }
+    virtual void addedToCPUCore(etiss::CPUCore * core);
+    virtual void removedFromCPUCore(etiss::CPUCore * core);
+private:
+    void * libhandle;
+    bool valid_;
+    std::string cfgfile;
+    std::vector<const char *> args;
+    etiss::interfaces::Delegate * bus;
+
+private:// or1ksim functions
+    int  (*or1ksim_run) (double );
+    void (*or1ksim_set_time_point)();
+    double (*or1ksim_get_time_period)();
+
+
+
+};

@@ -1,0 +1,2913 @@
+/**
+
+@copyright
+<pre>
+
+
+	Copyright (c) 2014 Institute for Electronic Design Automation, TU Munich
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+
+
+</pre>
+
+@date March 15, 2015
+
+@version 0.1
+
+*/
+/**
+	@file
+
+	@brief
+
+	@detail
+
+
+
+
+*/
+
+
+
+
+
+#include "ARMv6MArch.h"
+
+using namespace etiss ;
+using namespace etiss::instr ;
+
+ARMv6MArch::ARMv6MArch():CPUArch("ARMv6M") {}
+
+const std::set<std::string> & ARMv6MArch::getListenerSupportedRegisters()
+{
+    return listenerSupportedRegisters_;
+}
+
+// etiss::Plugin * newTimer(ETISS_CPU * cpu){}
+// void deleteTimer(etiss::Plugin * timer){}
+
+ETISS_CPU * ARMv6MArch::newCPU()
+{
+    ETISS_CPU * ret = (ETISS_CPU *) new ARMv6M() ;
+    resetCPU (ret, 0);
+    return ret;
+}
+
+void ARMv6MArch::resetCPU(ETISS_CPU * cpu,etiss::uint64 * startpointer)
+{
+    memset (cpu, 0, sizeof(ARMv6M));
+//    ((ARMv6M *) cpu )->MSP=  &((ARMv6M *) cpu)->R[13];
+//    ((ARMv6M *) cpu )->PSP =  &((ARMv6M *) cpu)->R13_A ;
+    if (startpointer) cpu->instructionPointer = *startpointer;
+    else cpu->instructionPointer =0;//  reference to manual
+    cpu->mode = 1;
+}
+void ARMv6MArch::deleteCPU(ETISS_CPU *cpu)
+{
+    delete (ARMv6M *) cpu ;
+}
+std::shared_ptr<etiss::VirtualStruct> ARMv6MArch::getVirtualStruct(ETISS_CPU * cpu)
+{
+    return etiss::VirtualStruct::allocate(cpu, [](etiss::VirtualStruct::Field*f)
+    {
+        delete f;
+    });
+}
+
+
+
+/**
+	@return 8 (jump instruction + instruction of delay slot)
+*/
+unsigned ARMv6MArch::getMaximumInstructionSizeInBytes()
+{
+    return 4;
+}
+/**
+	@return 4
+*/
+unsigned ARMv6MArch::getInstructionSizeInBytes()
+{
+    return 4;
+}
+/**
+	@brief required headers (OR1K.h)
+*/
+const std::set<std::string> & ARMv6MArch::getHeaders() const
+{
+    return headers_ ;
+}
+etiss::int32 ARMv6MArch::handleException(etiss::int32 code,ETISS_CPU * cpu)
+{
+    return code;    //
+}
+
+
+void ARMv6MArch::initCodeBlock(etiss::CodeBlock & cb) const
+{
+    cb.fileglobalCode().insert("#include \"Arch/ARMv6M.h\"\n");
+}
+
+
+
+etiss::instr::InstructionGroup Thumb("Thumb",16);
+etiss::instr::InstructionGroup Thumb2("Thumb2",32);
+etiss::instr::InstructionClass ThumbClass(1,"Thumb",16,Thumb); // since there is only one mode
+etiss::instr::InstructionClass Thumb2Class(1,"Thumb2",32, Thumb2); // since there is only one mode
+
+etiss::instr::InstructionCollection CortexM0("CortexM0",ThumbClass,Thumb2Class);
+
+const char * registerName []= { "R0", "R1" , "R2", "R3" ,"R4", "R5","R6", "R7","R8", "R9","R10", "R11", "R12", "R13","R14", "R15" } ;
+
+
+//--/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////--//
+//-----------------------------------------------------------Alphabetical-order-16-bits-------------------------------------------------------------------------------
+
+static InstructionDefinition ADC_reg( //
+    Thumb,
+    "ADCS",
+    (uint16_t)0x4140,
+    (uint16_t)0xffc0,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (5,3); // ic
+    static BitArrayRange rdn (2,0);
+
+    etiss_uint32 d= rdn.read(ba);
+    etiss_uint32 n= rdn.read(ba);
+    etiss_uint32 m= rm.read(ba);
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [m],32);
+	part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.getRegisterDependencies().add("APSR",32);
+    part.getAffectedRegisters().add("APSR",32);
+    part.code() = std::string( "//ADD_reg_T1\n")+
+//            "etiss_uint32 Rd = ((ARMv6M*)cpu)->R[" + toString(d) + "];\n"
+            "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+            "etiss_uint32 Rm = ((ARMv6M*)cpu)->R[" + toString(m) + "];\n"
+            "etiss_uint8 carry_in = (((ARMv6M *) cpu )->APSR) >> 29 & 0x1UL ;\n"
+            "etiss_int8 carry_out;\n"
+            "etiss_int8 overflow;\n"
+            "etiss_int64 signed_sum = (etiss_int32)Rm + (etiss_int32)Rn + carry_in;\n"
+            "etiss_uint64 unsigned_sum = Rm + Rn + carry_in;\n"
+            "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+            "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+            "if(unsigned_result == unsigned_sum)\n"
+            "    carry_out = 0;\n"
+            "else\n"
+            "    carry_out = 1;\n"
+            "if(signed_result == signed_sum)\n"
+            "    overflow = 0;\n"
+            "else\n"
+            "    overflow = 1;\n"
+            "etiss_int8 isZero;\n"
+            "etiss_int8 negative;\n"
+            "etiss_int8 flags;\n"
+            "if (unsigned_result == 0)\n"
+            "    isZero = 1;\n"
+            "else\n"
+            "    isZero = 0;\n"
+            "negative = unsigned_result >> 31 & 0x1UL;\n"
+            "flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+            "((ARMv6M*)cpu)->R[" + toString(d) + "]= unsigned_result;\n"
+            "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+
+        CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",32);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+static InstructionDefinition ADD_imm_T1(
+    Thumb, // associated InstructionGroup
+    "ADDS", // name
+    (uint16_t)0x1c00,
+    (uint16_t)0xfe00,
+//    parse_i32("6x38 15x0 1x0 2x0 4x0 4xe"), // opcode value
+//    parse_i32("6xFF 15x0 1x0 2xF 4x0 4xF"), // mask that defines which bits make up the opcode
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange imm (8,6);
+    static BitArrayRange rd (2,0);
+    static BitArrayRange rn (5,3);
+
+    etiss_uint32 d= rd.read(ba);
+    etiss_uint32 n= rn.read(ba);
+    etiss_uint32 Im= imm.read(ba);
+    etiss_int32 Imm = (etiss_int32) Im;
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.code() = std::string("//add_imm_T1\n")+
+//    "etiss_uint32 Rd = ((ARMv6M*)cpu)->R[" + toString(d) + "];\n"
+    "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+    "etiss_uint8 carry_in = 0;\n"
+    "etiss_int8 carry_out;\n"
+    "etiss_int8 overflow;\n"
+    "etiss_int64 signed_sum = " + toString(Imm) + " + (etiss_int32)Rn + carry_in;\n"
+    "etiss_uint64 unsigned_sum = " + toString(Im) + " + Rn + carry_in;\n"
+    "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+    "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+    "if(unsigned_result == unsigned_sum)\n"
+    "    carry_out = 0;\n"
+    "else\n"
+    "    carry_out = 1;\n"
+    "if(signed_result == signed_sum)\n"
+    "    overflow = 0;\n"
+    "else\n"
+    "    overflow = 1;\n"
+    "etiss_int8 isZero;\n"
+    "etiss_int8 negative;\n"
+    "etiss_int8 flags;\n"
+    "if (unsigned_result == 0)\n"
+    "    isZero = 1;\n"
+    "else\n"
+    "    isZero = 0;\n"
+    "negative =  unsigned_result >>31 & 0x1UL;\n"
+    "flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+    "((ARMv6M*)cpu)->R[" + toString(d) + "]= unsigned_result;";
+
+    CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED);
+    part2.getRegisterDependencies().add("APSR",32);
+    part2.getAffectedRegisters().add("APSR",32);
+    part2.code() = std::string( "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) |flags<<28;");
+    CodePart & part3 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+    part3.getAffectedRegisters().add("instructionPointer",32);
+    part3.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+//
+static InstructionDefinition ADD_imm_T2(
+    Thumb, // associated InstructionGroup
+    "ADDS", // name
+    (uint16_t)0x3000,
+    (uint16_t)0xf800,
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange imm (7,0);
+    static BitArrayRange rd (10,8);
+    static BitArrayRange rn (10,8);
+
+    etiss_uint32 d= rd.read(ba);
+    etiss_uint32 n= rn.read(ba);
+    etiss_uint32 Im= imm.read(ba);
+    etiss_int32 Imm = (etiss_int32) Im;
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.code() = std::string("//ADD_imm_T2\n")+
+//        "etiss_uint32 Rd = ((ARMv6M*)cpu)->R[" + toString(d) + "];\n"
+        "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+        "etiss_uint8 carry_in = 0;\n"
+        "etiss_int8 carry_out;\n"
+        "etiss_int8 overflow;\n"
+        "etiss_int64 signed_sum = " +toString(Imm) + "+ (etiss_int32)Rn + carry_in;\n"
+        "etiss_uint64 unsigned_sum = " +toString(Im) + "+ Rn + carry_in;\n"
+        "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+        "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+        "if(unsigned_result == unsigned_sum)\n"
+            "carry_out = 0;\n"
+        "else\n"
+            "carry_out = 1;\n"
+        "if(signed_result == signed_sum)\n"
+            "overflow = 0;\n"
+        "else\n"
+            "overflow = 1;\n"
+        "etiss_int8 isZero;\n"
+        "etiss_int8 negative;\n"
+        "etiss_int8 flags;\n"
+        "if (unsigned_result == 0)\n"
+            "isZero = 1;\n"
+        "else\n"
+            "isZero = 0;\n"
+        "negative =  unsigned_result >>31 & 0x1UL;\n"
+        "flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow; \n"
+        "((ARMv6M*)cpu)->R[" + toString(d) + "]= unsigned_result;";
+
+    CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED);
+    part2.getRegisterDependencies().add("APSR",32);
+    part2.getAffectedRegisters().add("APSR",32);
+    part2.code() = std::string( "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)->APSR & 0x0FFFFFFFL ) |(flags<<28);");
+
+    CodePart & part3 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+    part3.getAffectedRegisters().add("instructionPointer",32);
+    part3.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+
+static InstructionDefinition ADD_reg_T1(
+    Thumb, // associated InstructionGroup
+    "ADDS", // name
+    (uint16_t)0x1800,
+    (uint16_t)0xfe00,
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange rm (8,6);
+    static BitArrayRange rd (2,0);
+    static BitArrayRange rn (5,3);
+
+    etiss_uint32 d= rd.read(ba);
+    etiss_uint32 m= rm.read(ba);
+    etiss_uint32 n= rn.read(ba);
+    CodePart & partInit = cs.append(CodePart::INITIALREQUIRED);
+    partInit.getRegisterDependencies().add(registerName [m],32);
+    partInit.getRegisterDependencies().add(registerName [n],32);
+    partInit.getRegisterDependencies().add(registerName [d],32);
+    partInit.getRegisterDependencies().add("APSR",32);
+    partInit.getAffectedRegisters().add("APSR",32);
+    partInit.code() = std::string( "//ADD_reg_T1\n")+
+//            "etiss_uint32 Rd = ((ARMv6M*)cpu)->R[" + toString(d) + "];\n"
+            "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+            "etiss_uint32 Rm = ((ARMv6M*)cpu)->R[" + toString(m) + "];\n"
+            "etiss_uint8 carry_in = (((ARMv6M *) cpu )->APSR) >> 29 & 0x1UL ;\n"
+            "etiss_int8 carry_out;\n"
+            "etiss_int8 overflow;\n"
+            "etiss_int64 signed_sum = (etiss_int32)Rm + (etiss_int32)Rn + carry_in;\n"
+            "etiss_uint64 unsigned_sum = Rm + Rn + carry_in;\n"
+            "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+            "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n";
+     if ( d == 15)
+    {
+        CodePart & part = cs.append(CodePart::APPENDEDREQUIRED);
+        part.getAffectedRegisters().add("instructionPointer",32);
+        part.code() = "cpu->instructionPointer = unsigned_result";
+//        ic.force_block_end_ = true ;
+
+    }
+    else
+    {
+        CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+        part.getRegisterDependencies().add(registerName [m],32);
+        part.getRegisterDependencies().add(registerName [n],32);
+        part.getAffectedRegisters().add(registerName [d],32);
+        part.getRegisterDependencies().add("APSR",32);
+        part.getAffectedRegisters().add("APSR",32);
+        part.code() =   "if(unsigned_result == unsigned_sum)\n"
+            "    carry_out = 0;\n"
+            "else\n"
+            "    carry_out = 1;\n"
+            "if(signed_result == signed_sum)\n"
+            "    overflow = 0;\n"
+            "else\n"
+            "    overflow = 1;\n"
+            "etiss_int8 isZero;\n"
+            "etiss_int8 negative;\n"
+            "etiss_int8 flags;\n"
+            "if (unsigned_result == 0)\n"
+            "    isZero = 1;\n"
+            "else\n"
+            "    isZero = 0;\n"
+            "negative = unsigned_result >>31 & 0x1UL;\n"
+            "flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+            "((ARMv6M*)cpu)->R[" + toString(d) + "]= unsigned_result;\n"
+            "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+
+        CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",32);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    }
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+
+
+
+static InstructionDefinition ADD_SPimm_T1(
+    Thumb, // associated InstructionGroup
+    "ADD", // name
+    (uint16_t)0xa800,
+    (uint16_t)0xf800,
+
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange imm (7,0);
+    static BitArrayRange rd (10,8);
+    etiss_uint32 Im = imm.read(ba);
+    etiss_int32 Imm = (etiss_int32)Im;
+    etiss_uint32 d= rd.read(ba);
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [13],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.code() = std::string("//add_SPimm_T1\n")+
+
+    "etiss_uint32 SP = ((ARMv6M*)cpu)->R[13];\n"
+//    "etiss_uint32 Rd = ((ARMv6M*)cpu)->R["+toString(d)+"];\n"
+    "etiss_uint8 carry_in = 0;\n"
+//    "etiss_int64 signed_sum = (etiss_int32)SP + "+toString(Imm)+" + carry_in;\n"
+    "etiss_uint64 unsigned_sum = SP + "+toString(Im)+" + carry_in;\n"
+    "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+//    "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+    "((ARMv6M*)cpu)->R[" + toString(d) + "]= unsigned_result;";
+    CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+    part2.getAffectedRegisters().add("instructionPointer",32);
+    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+//
+static InstructionDefinition ADD_SPimm_T2(
+    Thumb,// associated InstructionGroup
+    "ADD", // name
+    (uint16_t)0xb000,
+    (uint16_t)0xff80,
+
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange imm (6,0);
+
+    etiss_uint32 Im = imm.read(ba);
+    etiss_int32 Imm = (etiss_int32)Im;
+
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [13],32);
+    part.getAffectedRegisters().add(registerName [13],32);
+    part.code() = std::string("//add_SPimm_T2\n")+
+    "etiss_uint32 SP = ((ARMv6M*)cpu)->R[13];\n"
+    "etiss_uint8 carry_in = 0;\n"
+//    "etiss_int64 signed_sum = (etiss_int32)SP + "+ toString(Imm) + "+ carry_in;\n"
+    "etiss_uint64 unsigned_sum = SP + "+ toString(Im) + "+ carry_in;\n"
+    "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+//    "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+    "((ARMv6M*)cpu)->R[13]= unsigned_result; ";
+    CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+    part2.getAffectedRegisters().add("instructionPointer",32);
+    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+
+static InstructionDefinition ADD_reg_SPreg(
+    Thumb,// associated InstructionGroup
+    "ADD", // name
+    (uint16_t)0x4400,
+    (uint16_t)0xff00,
+
+    [](BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) // callback to translate the "add" instruction
+{
+    static BitArrayRange rdm (2,0);
+    static BitArrayRange rm (6,3);
+    static BitArrayRange DM (7,7);
+    etiss_uint32 m = (DM.read(ba)<<3 ) + rdm.read(ba);
+    etiss_uint32 n = (DM.read(ba)<<3 ) + rdm.read(ba);
+    etiss_uint32 d = (DM.read(ba)<<3 ) + rdm.read(ba);
+    etiss_uint32 Rm = rm.read(ba);
+    if(Rm == 13) {
+            //encoding T1
+            CodePart & partInit = cs.append(CodePart::INITIALREQUIRED);
+            partInit.getRegisterDependencies().add(registerName [13],32);
+            partInit.getRegisterDependencies().add(registerName [m],32);
+            partInit.getAffectedRegisters().add(registerName [d],32);
+            partInit.code() = std::string("//add_SPreg_T1\n")+
+            "etiss_uint32 Rm = ((ARMv6M*)cpu)->R["+toString(m)+"];\n"
+            "etiss_uint32 SP = ((ARMv6M*)cpu)->R[13];\n"
+            "etiss_uint8 carry_in = 0;\n"
+//            "etiss_int64 signed_sum = (etiss_int32)SP + (etiss_int32)Rm+ carry_in;\n"
+            "etiss_uint64 unsigned_sum = SP + Rm + carry_in;\n"
+            "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n";
+//            "etiss_int32 signed_result = signed_sum & 0xffffffffL;";
+
+         if ( d == 15)
+        {
+
+            CodePart & part = cs.append(CodePart::APPENDEDREQUIRED);
+            part.getAffectedRegisters().add("instructionPointer",32);
+            part.code() = "cpu->instructionPointer = unsigned_result";
+            ic.force_block_end_ = true ;
+
+        }
+        else{
+            CodePart & part = cs.append(CodePart::APPENDEDREQUIRED);
+            part.getRegisterDependencies().add(registerName [13],32);
+            part.getRegisterDependencies().add(registerName [m],32);
+            part.getAffectedRegisters().add(registerName [d],32);
+            part.code() = std::string( "((ARMv6M*)cpu)->R[") + toString(d) + "]= unsigned_result;";
+
+            CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+            part2.getAffectedRegisters().add("instructionPointer",32);
+            part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+        }
+    }else if(m == 13){
+        //encoding T2
+            CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+            part.getRegisterDependencies().add(registerName [13],32);
+            part.getRegisterDependencies().add(registerName [Rm],32);
+            part.getAffectedRegisters().add(registerName [13],32);
+            part.code() = std::string( "//add_SPreg_T2\n")+
+            "etiss_uint32 Rm = ((ARMv6M*)cpu)->R["+toString(Rm)+"];\n"
+            "etiss_uint32 SP = ((ARMv6M*)cpu)->R[13];\n"
+            "etiss_uint8 carry_in = 0;\n"
+//            "etiss_int64 signed_sum = (etiss_int32)SP + (etiss_int32)Rm+ carry_in;\n"
+            "etiss_uint64 unsigned_sum = SP + Rm + carry_in;\n"
+            "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n"
+//            "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n"
+            "((ARMv6M*)cpu)->R[13]= unsigned_result;";
+            CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+            part2.getAffectedRegisters().add("instructionPointer",32);
+            part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+    }else{
+          //ADD_reg_T2
+            CodePart & partInit = cs.append(CodePart::INITIALREQUIRED);
+            partInit.getRegisterDependencies().add(registerName [m],32);
+            partInit.getRegisterDependencies().add(registerName [n],32);
+            partInit.getRegisterDependencies().add("APSR",32);
+            partInit.code() = std::string("//ADD_reg_T2\n")+
+//                "etiss_uint32 Rd = ((ARMv6M*)cpu)->R[" + toString(d) + "];\n"
+                "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+                "etiss_uint32 Rm = ((ARMv6M*)cpu)->R[" + toString(m) + "];\n"
+                "etiss_uint8 carry_in = (((ARMv6M *) cpu )->APSR) >> 29 & 0x1UL ;\n"
+                "etiss_uint8 carry_out;\n"
+                "etiss_uint8 overflow;\n"
+//                "etiss_int64 signed_sum = (etiss_int32)Rm + (etiss_int32)Rn + carry_in;\n"
+                "etiss_uint64 unsigned_sum = Rm + Rn + carry_in;\n"
+                "etiss_uint32 unsigned_result = unsigned_sum & 0xffffffffL;\n";
+//                "etiss_int32 signed_result = signed_sum & 0xffffffffL;\n";
+
+             if ( d == 15)
+            {
+                CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED);
+                part2.getAffectedRegisters().add("instructionPointer",32);
+                part2.code() = "cpu->instructionPointer = unsigned_result;";
+                ic.force_block_end_ = true ;
+
+            }
+            else
+            {   CodePart & part = cs.append(CodePart::APPENDEDREQUIRED);
+                part.getAffectedRegisters().add(registerName [d],32);
+                part.code() = std::string( "((ARMv6M*)cpu)->R[") + toString(d) + "]= unsigned_result;";
+                CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+                part2.getAffectedRegisters().add("instructionPointer",32);
+                part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+            }
+
+    }
+
+    return true;
+
+},
+0, // see etiss::instr::Instruction::BUILTINGROUP for possible value and meaning
+0 // callback routing to enable printing of assembler output. optional
+);
+
+static InstructionDefinition ADR( //------------------------------------
+    Thumb,
+    "ADR",
+    (uint16_t)0xa000,
+    (uint16_t)0xf800,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rd (10,8); // ic
+    static BitArrayRange imm8 (7,0);
+
+    etiss_uint32 d= rd.read(ba);
+    etiss_uint32 imm= imm8.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+
+	part.getRegisterDependencies().add(registerName [d],32);
+    part.getAffectedRegisters().add("instructionPointer",64);
+
+    part.code() = std::string("//ADR\n")+
+        "etiss_uint32 PC= ((ARMv6M*)cpu)->R[15];\n"
+        "((ARMv6M*)cpu)->R[" + toString(d) + "] = ((PC + 4) & 0xFFFFFFFCULL) + "+toString(imm)+" ;";
+        "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition AND( //------------------------------------------------- this is complete
+    Thumb,
+    "ANDS",
+    (uint16_t)0x4000,
+    (uint16_t)0xffc0,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (5,3); // ic
+    static BitArrayRange rdn (2,0);
+
+    etiss_uint32 n= rdn.read(ba);
+    etiss_uint32 d= rdn.read(ba);
+    etiss_uint32 m= rm.read(ba);
+
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [m],32);
+	part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.getRegisterDependencies().add("APSR",32);
+    part.getAffectedRegisters().add("APSR",32);
+    part.code() = std::string( "//ADR\n")+
+            "((ARMv6M*)cpu)->R["+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] & ((ARMv6M*)cpu)->R["+toString(m)+"] ;"
+            "etiss_uint8 carry_in = (((ARMv6M *) cpu )->APSR) >> 29 & 0x1UL ;\n"
+            "etiss_uint8 overflow = (((ARMv6M *) cpu )->APSR) >> 28 & 0x1UL ;\n"
+            "etiss_uint8 isZero = 0;;\n"
+            "if (((ARMv6M*)cpu)->R["+toString(d)+"] == 0)\n"
+            "     isZero = 1;\n"
+            "else\n"
+            "     isZero = 0;\n"
+            "etiss_uint8 negative = ((ARMv6M*)cpu)->R["+toString(d)+"] >>31 & 0x1UL;\n"
+            "etiss_uint8 flags =  (negative<<3) + (isZero<<2) + (carry_in<<1) + overflow;\n"
+            "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",64);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition ASR_imm( //-------------------------------------exclusive or instruction-------------- this is complete
+    Thumb,
+    "ASRS",
+    (uint16_t)0x1000,
+    (uint16_t)0xf800,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (5,3); // ic
+    static BitArrayRange rd (2,0);
+	static BitArrayRange imm5 (10,6);
+    etiss_uint32 d= rd.read(ba);
+    etiss_uint32 m= rm.read(ba);
+	etiss_uint32 imm = imm5.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [m],32);
+	part.getRegisterDependencies().add(registerName [d],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.getRegisterDependencies().add("APSR",32);
+    part.getAffectedRegisters().add("APSR",32);
+    part.code() = std::string( "//ASRS_imm\n")+
+    "etiss_uint32 Rm = ((ARMv6M*)cpu)->R[" + toString(m) + "];\n"
+    "etiss_uint32 shift = " + toString(imm) + ";\n"
+    "if (shift == 0)\n"
+        "shift = 32;\n"
+//    "assert ( shift > 0);\n"
+    "etiss_uint8 MSB = Rm >> 31 & 0x1UL;\n"
+    "etiss_uint64 extended = Rm;\n"
+    "int i;\n"
+    "for(i = 32;i<shift+32;i++){\n"
+    "    extended |= MSB << i; \n"
+    "}\n"
+     "etiss_uint8 carry_out = extended >> (shift - 1) & 0x1UL;\n"
+//    "//implementation-defined behavior of right shift!\n"
+//    "((ARMv6M*)cpu)->R[" + toString(d) + "]  = Rm >> shift;\n"
+    "((ARMv6M*)cpu)->R[" + toString(d) + "]  = (extended >> shift) & 0xFFFFFFFFULL;\n";
+            "etiss_uint8 overflow = (((ARMv6M *) cpu )->APSR) >> 28 & 0x1UL ;\n"
+            "etiss_uint8 isZero = 0;;\n"
+            "if (((ARMv6M*)cpu)->R["+toString(d)+"] == 0)\n"
+            "     isZero = 1;\n"
+            "else\n"
+            "     isZero = 0;\n"
+            "etiss_uint8 negative = ((ARMv6M*)cpu)->R["+toString(d)+"] >>31 & 0x1UL;\n"
+            "etiss_uint8 flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+            "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",64);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition ASR_reg( //-------------------------------------Shift Right instruction-------------- this is complete
+    Thumb,
+    "ASRS",
+    (uint16_t)0x4100,
+    (uint16_t)0xffc0,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (5,3); // ic
+    static BitArrayRange rdn (2,0);
+    etiss_uint32 d= rdn.read(ba);
+    etiss_uint32 m= rm.read(ba);
+	etiss_uint32 n = rdn.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [m],32);
+	part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.getRegisterDependencies().add("APSR",32);
+    part.getAffectedRegisters().add("APSR",32);
+    part.code() = std::string( "//ASRS_reg\n")+
+    "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+    "etiss_uint8 shift = (((ARMv6M*)cpu)->R[" + toString(m) + "] ) & 0xFF;\n"
+     "etiss_uint8 carry_out = 0;\n"
+    "if (shift == 0)\n"
+        "shift = 32;\n"
+//    "assert ( shift > 0);\n"
+    "etiss_uint8 MSB = (Rn >> 31) & 0x1UL;\n"
+    "if(shift<=32){\n"
+    "etiss_uint64 extended = Rn;\n"
+    "int i;\n"
+    "for(i = 32;i<shift+32;i++){\n"
+    "    extended &= ~(1 << i);\n"
+    "    extended |= MSB << i; \n"
+    "}\n"
+    "carry_out = extended >> (shift - 1) & 0x1UL;\n"
+    "((ARMv6M*)cpu)->R[" + toString(d) + "]  = (extended >> shift) & 0xFFFFFFFFULL;\n"
+    "}else{          //shift larger than 32 bits\n"
+     "etiss_uint32 cat = 0;\n"
+    "int i;\n"
+    "for(i = 0;i<32;i++){\n"
+    "    cat |= MSB << i; \n"
+    "}\n"
+     "carry_out = MSB;\n"
+     "((ARMv6M*)cpu)->R[" + toString(d) + "]  = cat;\n"
+    "}\n"
+//    "//implementation-defined behavior of right shift!\n"
+//    "((ARMv6M*)cpu)->R[" + toString(d) + "]  = Rm >> shift;\n"
+
+            "etiss_uint8 overflow = (((ARMv6M *) cpu )->APSR) >> 28 & 0x1UL ;\n"
+            "etiss_uint8 isZero = 0;\n"
+            "if (((ARMv6M*)cpu)->R["+toString(d)+"] == 0)\n"
+            "     isZero = 1;\n"
+            "else\n"
+            "     isZero = 0;\n"
+            "etiss_uint8 negative = ((ARMv6M*)cpu)->R["+toString(d)+"] >>31 & 0x1UL;\n"
+            "etiss_uint8 flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+            "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",64);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition B_T1( //-------------------------------------Shift Right instruction-------------- this is complete
+    Thumb,
+    "B",
+    (uint16_t)0xD000,
+    (uint16_t)0xf000,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange imm8 (7,0); // ic
+    static BitArrayRange cond (11,8);
+    etiss_uint32 con= cond.read(ba);
+    etiss_uint32 Imm= imm8.read(ba);
+    if(con!=14&&con!=15){
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getAffectedRegisters().add("instructionPointer",64);
+
+    part.code() = std::string( "//B_T1\n")+
+    "etiss_uint32 imm = " + toString(Imm) + ";\n"
+    "etiss_uint8 MSB = imm >> 7 & 0x1UL;\n"
+    "etiss_uint32 extended = imm<<1;\n"
+    "int i;\n"
+    "for(i = 9;i<32;i++){\n"
+    "    extended &= ~(1 << i);\n"
+    "    extended |= MSB << i; \n"
+    "}\n"
+    "cpu->instructionPointer =  (cpu->instructionPointer + extended) & (~0x1UL);";
+
+    return true;
+    }else{
+    return false;
+    }
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition B_T2( //-------------------------------------Shift Right instruction-------------- this is complete
+    Thumb,
+    "B",
+    (uint16_t)0xE000,
+    (uint16_t)0xf800,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange imm11 (10,0); // ic
+    etiss_uint32 Imm= imm11.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getAffectedRegisters().add("instructionPointer",64);
+    part.code() = std::string( "//B_T2\n")+
+    "etiss_uint32 imm = " + toString(Imm) + ";\n"
+    "etiss_uint8 MSB = imm >> 10 & 0x1UL;\n"
+    "etiss_uint32 extended = imm<<1;\n"
+    "int i;\n"
+    "for(i = 12;i<32;i++){\n"
+    "    extended &= ~(1 << i);\n"
+    "    extended |= MSB << i; \n"
+    "}\n"
+    "cpu->instructionPointer =  (cpu->instructionPointer + extended) & (~0x1UL);";
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition BIC( //-------------------------------------exclusive or instruction-------------- this is complete
+    Thumb,
+    "BICS",
+    (uint16_t)0x4380,
+    (uint16_t)0xffc0,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (5,3); // ic
+    static BitArrayRange rdn (2,0);
+    etiss_uint32 d= rdn.read(ba);
+    etiss_uint32 m= rm.read(ba);
+	etiss_uint32 n = rdn.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [m],32);
+	part.getRegisterDependencies().add(registerName [n],32);
+    part.getAffectedRegisters().add(registerName [d],32);
+    part.getRegisterDependencies().add("APSR",32);
+    part.getAffectedRegisters().add("APSR",32);
+    part.code() = std::string( "//BICS\n")+
+    "etiss_uint32 Rn = ((ARMv6M*)cpu)->R[" + toString(n) + "];\n"
+    "etiss_uint32 Rm = ((ARMv6M*)cpu)->R[" + toString(m) + "];\n"
+    "((ARMv6M*)cpu)->R[" + toString(d) + "] = Rn & (~Rm);\n"
+    "etiss_uint8 carry_out = (((ARMv6M *) cpu )->APSR) >> 29 & 0x1UL ;\n"
+    "etiss_uint8 overflow = (((ARMv6M *) cpu )->APSR) >> 28 & 0x1UL ;\n"
+    "etiss_uint8 isZero = 0;\n"
+    "if (((ARMv6M*)cpu)->R["+toString(d)+"] == 0)\n"
+    "     isZero = 1;\n"
+    "else\n"
+    "     isZero = 0;\n"
+    "etiss_uint8 negative = ((ARMv6M*)cpu)->R["+toString(d)+"] >>31 & 0x1UL;\n"
+    "etiss_uint8 flags =  (negative<<3) + (isZero<<2) + (carry_out<<1) + overflow;\n"
+    "((ARMv6M*)cpu)-> APSR = ( ((ARMv6M*)cpu)-> APSR & 0x0FFFFFFFL ) | (flags<<28);";
+    CodePart & part2 = cs.append(CodePart::APPENDEDREQUIRED); // add a code container
+    part2.getAffectedRegisters().add("instructionPointer",64);
+    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition BL( //-------------------------------------exclusive or instruction-------------- this is complete
+    Thumb2,
+    "BL",
+    (uint32_t)0xf000d000,
+    (uint32_t)0xf800d000,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange s (26,26); // ic
+    static BitArrayRange imm10 (25,16);
+    static BitArrayRange imm11 (10,0);
+    static BitArrayRange j1 (13,13);
+    static BitArrayRange j2 (11,11);
+    etiss_uint8 S= s.read(ba);
+    etiss_uint32 Imm10= imm10.read(ba);
+	etiss_uint32 Imm11 = imm11.read(ba);
+	etiss_uint8 J1 = j1.read(ba);
+	etiss_uint8 J2 = j2.read(ba);
+    etiss_uint8 I1 = ~(J1^S);
+    etiss_uint8 I2 = ~(J2^S);
+    etiss_uint32 Imm32 = (S<<24) + (I1<<23) + (I2<<22) + (Imm10<<12) + (Imm11<<1);
+    etiss_uint8 MSB = S;
+    etiss_uint32 extended = Imm32;
+    etiss_uint8 i;
+    for(i = 25;i<32;i++){
+        extended &= ~(1 << i);
+        extended |= MSB << i;
+    }
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [15],32);
+    part.getAffectedRegisters().add(registerName [15],32);
+    part.getAffectedRegisters().add(registerName [14],32);
+    part.code() = std::string( "//BL\n")+
+    "etiss_uint32 PC = ((ARMv6M*)cpu)-> R[15];\n"
+    "((ARMv6M*)cpu)-> R[14] = PC | 0x1UL;\n"
+    "((ARMv6M*)cpu)-> R[15] = (PC + "+toString(extended)+") & (~0x1UL);";
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition BLX_reg( //-------------------------------------need to implement the jump
+    Thumb,
+    "BLX",
+    (uint16_t)0x4780,
+    (uint16_t)0xff80,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (6,3); // ic
+    etiss_uint32 m= rm.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [15],32);
+    part.getAffectedRegisters().add(registerName [15],32);
+    part.getAffectedRegisters().add(registerName [14],32);
+    part.getRegisterDependencies().add("EPSR",32);
+    part.getAffectedRegisters().add("EPSR",32);
+    part.code() = std::string( "//BLX_reg\n")+
+    "etiss_uint32 target = ((ARMv6M*)cpu)-> R["+toString(m)+"];\n"
+    "etiss_uint32 PC = ((ARMv6M*)cpu)-> R[15];\n"
+    "((ARMv6M*)cpu)-> R[14] = (PC -2) | 0x1UL;\n"
+    "((ARMv6M*)cpu)-> EPSR &= ~(0x1UL<<24);\n"
+    "((ARMv6M*)cpu)-> EPSR |= (target & 0x1UL)<<24;\n"
+    "((ARMv6M*)cpu)-> R[15] = target & (~0x1UL);";
+
+
+        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",64);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+static InstructionDefinition BX_br_ex( //-------------------------------------need to implement the jump
+    Thumb,
+    "BX",
+    (uint16_t)0x4700,
+    (uint16_t)0xff80,
+    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+{
+    static BitArrayRange rm (6,3); // ic
+    etiss_uint32 m= rm.read(ba);
+    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+    part.getRegisterDependencies().add(registerName [15],32);
+    part.getAffectedRegisters().add(registerName [15],32);
+    part.getRegisterDependencies().add("EPSR",32);
+    part.getAffectedRegisters().add("EPSR",32);
+    part.code() = std::string( "//BLX_reg\n")+
+    "etiss_uint32 target = ((ARMv6M*)cpu)-> R["+toString(m)+"];\n"
+    "((ARMv6M*)cpu)-> EPSR &= ~(0x1UL<<24);\n"
+    "((ARMv6M*)cpu)-> EPSR |= (target & 0x1UL)<<24;\n"// set the EPSR.T to taget<0>
+    "((ARMv6M*)cpu)-> R[15] = target & (~0x1UL);";//set the last bit to 0
+
+
+        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+        part2.getAffectedRegisters().add("instructionPointer",64);
+        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+
+    return true;
+},
+0,
+nullptr     //it is a disassembler function
+);
+
+//static InstructionDefinition CMN_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "CMN",
+//    (uint16_t)0x42c0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] ^ ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition CMP_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "CMP",
+//    (uint16_t)0x2800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//    static BitArrayRange imm8 (7,0);
+//
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition CMP_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "CMP",
+//    (uint16_t)0x4280,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3);
+//    static BitArrayRange rn (2,0);
+//
+//    int n= rn.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition CMP_reg_T2( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "CMP",
+//    (uint16_t)0x4500,
+//    (uint16_t)0xff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rn (2,0);
+//    static BitArrayRange rnn(7,7);
+//
+//    int n= rn.read(ba)+rnn.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [n],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(n)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+////--///////////////////////////////////////////DMB and DSB are in the section of 32-bits instruction at the end--/////////////--//
+//
+//static InstructionDefinition EOR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "EORS",
+//    (uint16_t)0x4040,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LMD_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LMD",
+//    (uint16_t)0xc800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange register_list (7,0); // ic
+//    static BitArrayRange rn (10,8);
+//
+//    int rl= register_list.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//
+//    part.getAffectedRegisters().add(registerName [n],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(n)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDR_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDR",
+//    (uint16_t)0x6800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm5 (10,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int n= rn.read(ba);
+//    int imm= imm5.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(t)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDR_imm_T2( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDR",
+//    (uint16_t)0x9800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm7 (7,0); // ic
+//    static BitArrayRange rt (10,8);
+//
+//    int t= rt.read(ba);
+//    int imm= imm7.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(t)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDR_lit_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDR",
+//    (uint16_t)0x4800,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rt (10,8); // ic
+//    static BitArrayRange imm8 (7,0);
+//
+//    int t= rt.read(ba);
+//    int imm= imm8.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(t)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDR",
+//    (uint16_t)0x5800,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDRB_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRB",
+//    (uint16_t)0x7800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm5 (10,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int imm= imm5.read(ba);
+//    int n=rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDRB_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRB",
+//    (uint16_t)0x5d00,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDRH_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRH",
+//    (uint16_t)0x8800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm5 (10,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int imm= imm5.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDRH_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRH",
+//    (uint16_t)0x5a00,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n=rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//
+//static InstructionDefinition LDRSB_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRSB",
+//    (uint16_t)0x5600,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LDRSH_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LDRSH",
+//    (uint16_t)0x5e00,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LSLS_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LSLS",
+//    (uint16_t)0x0000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange imm5 (10,6);
+//
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//
+//static InstructionDefinition LSLS_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LSLS",
+//    (uint16_t)0x4080,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LSR_imm_T1 ( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LSRS",
+//    (uint16_t)0x0800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//    static BitArrayRange imm5 (10,6);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//    int imm= imm5.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition LSR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "LSRS",
+//    (uint16_t)0x40c0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition MOV_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "MOVS",
+//    (uint16_t)0x2000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm8 (7,0); // ic
+//    static BitArrayRange rd (10,8);
+//
+//    int d= rd.read(ba);
+//    int imm= imm8.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->+toString(imm)+ ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition MOV_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "MOV",
+//    (uint16_t)0x4600,
+//    (uint16_t)0xff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (6,3); // ic
+//    static BitArrayRange rd (2,0);
+//    static BitArrayRange p (7,7);
+//
+//
+//    int d= p.read(ba) + rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition MOV_reg_T2( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "MOVS",
+//    (uint16_t)0x0000,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+////--////////////////////////////////////////////--MRS is in 32-bits Instructins list at the end--///////////////////--//
+//
+//static InstructionDefinition MUL_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "MULS",
+//    (uint16_t)0x4340,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rn (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition MVN_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "MVNS",
+//    (uint16_t)0x43c0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition NOP( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "NOP",
+//    (uint16_t)0x4140,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic)
+//
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition ORR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "ORRS",
+//    (uint16_t)0x4300,
+//    (uint16_t)0xff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition POP_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "POP",
+//    (uint16_t)0xb800,
+//    (uint16_t)0xfc00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange register_list (7,0); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//
+//	part.getRegisterDependencies().add(registerName [d],32);
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition PUSH_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "PUSH",
+//    (uint16_t)0xb400,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange register_list (7,0); // ic
+//
+//
+//    int rl= register_list.read(ba);
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition REV_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "REV",
+//    (uint16_t)0xba00,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition REV16_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "REV16",
+//    (uint16_t)0xba40,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition REVSH_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "REVSH",
+//    (uint16_t)0xbac0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition ROR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "RORS",
+//    (uint16_t)0x41c0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition RSB_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "RSBS",
+//    (uint16_t)0x4240,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SBC_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SBCS",
+//    (uint16_t)0x4180,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//
+//static InstructionDefinition SEV_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SEV",
+//    (uint16_t)0xbf40,
+//    (uint16_t)0xffff,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STM_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STM",
+//    (uint16_t)0xc000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange register_list (5,3); // ic
+//    static BitArrayRange rn (2,0);
+//
+//    int rl= register_list.read(ba);
+//    int n= rn.read(ba);
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STR_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STR",
+//    (uint16_t)0x6000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rt (2,0); // ic
+//    static BitArrayRange imm5 (10,6);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int imm= imm5.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STR_imm_T2( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STR",
+//    (uint16_t)0x9000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rt (10,8); // ic
+//    static BitArrayRange imm8 (7,0);
+//
+//    int t= rt.read(ba);
+//    int imm= imm8.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(t)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STR_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STR",
+//    (uint16_t)0x5000,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STRB_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STRB",
+//    (uint16_t)0x7000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rt (2,0); // ic
+//    static BitArrayRange imm5 (10,6);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STRB_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STRB",
+//    (uint16_t)0x5400,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STRH_imm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STRH",
+//    (uint16_t)0x8000,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rt (2,0); // ic
+//    static BitArrayRange imm5 (10,6);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int imm= imm5.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition STRH_reg_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "STRH",
+//    (uint16_t)0x5200,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rt (2,0);
+//    static BitArrayRange rn (5,3);
+//    int t= rt.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [t],32);
+//    part.getAffectedRegisters().add(registerName [t],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(t)+"]= ((ARMv6M*)cpu)->R["+toString(t)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SUB_imm_t1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SUBS",
+//    (uint16_t)0x1e00,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rd (2,0); // ic
+//    static BitArrayRange imm3 (8,6);
+//    static BitArrayRange rn (5,3);
+//    int d= rd.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [n],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(n)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SUB_imm_T2( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SUBS",
+//    (uint16_t)0x3800,
+//    (uint16_t)0xf800,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (10,8); // ic
+//    static BitArrayRange imm8 (7,0);
+//
+//    int m= rm.read(ba);
+//    int imm= imm8.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//
+//    part.getAffectedRegisters().add(registerName [m],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(m)+"]= ((ARMv6M*)cpu)->R["+toString(m)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SUB_reg_T1( //--------------------
+//    Thumb,
+//    "SUBS",
+//    (uint16_t)0x1a00,
+//    (uint16_t)0xfe00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (8,6); // ic
+//    static BitArrayRange rd (2,0);
+//    static BitArrayRange rn (5,3);
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SUB_SPimm_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SUB",
+//    (uint16_t)0xb080,
+//    (uint16_t)0xff80,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm7 (6,0); // ic
+//
+//    int imm= imm7.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [imm],32);
+//	part.getRegisterDependencies().add(registerName [imm],32);
+//    part.getAffectedRegisters().add(registerName [imm],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(imm)+"]= ((ARMv6M*)cpu)->imm + ((ARMv6M*)cpu)->imm ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SVC_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SVC",
+//    (uint16_t)0xdf00,
+//    (uint16_t)0xff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm8 (7,0); // ic
+//
+//    int imm= imm8.read(ba);
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SXTB_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SXTB",
+//    (uint16_t)0xb240,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition SXTH_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "SXTH",
+//    (uint16_t)0xb200,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition TST_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "TST",
+//    (uint16_t)0x4200,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rn (2,0);
+//
+//    int m= rm.read(ba);
+//    int n= rn.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [n],32);
+//    part.getAffectedRegisters().add(registerName [n],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(n)+"]= ((ARMv6M*)cpu)->R["+toString(n)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition UDF_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "UDF",
+//    (uint16_t)0xde00,
+//    (uint16_t)0xff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange imm8 (7,0); // ic
+//
+//    int imm= imm8.read(ba);
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+////--/////////////////////////////////////////----UDF_T2 is in 32-bit instructions at the end---///////////////////////////////--//
+//
+//static InstructionDefinition UXTB_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "UXTB",
+//    (uint16_t)0xb2c0,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition UXTH_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "UXTH",
+//    (uint16_t)0xb280,
+//    (uint16_t)0xffc0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange rm (5,3); // ic
+//    static BitArrayRange rd (2,0);
+//
+//    int d= rd.read(ba);
+//    int m= rm.read(ba);
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//    part.getRegisterDependencies().add(registerName [m],32);
+//	part.getRegisterDependencies().add(registerName [d],32);
+//    part.getAffectedRegisters().add(registerName [d],32);
+//
+//    part.code() = std::string( "((ARMv6M*)cpu)->R[")+toString(d)+"]= ((ARMv6M*)cpu)->R["+toString(d)+"] + ((ARMv6M*)cpu)->R["+toString(m)+"] ;";
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition WFE_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "WFE",
+//    (uint16_t)0xbf20,
+//    (uint16_t)0xffff,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition WFI_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "WFI",
+//    (uint16_t)0xbf30,
+//    (uint16_t)0xffff,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//    CodePart & part = cs.append(CodePart::INITIALREQUIRED);
+//
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+//static InstructionDefinition YIELD_T1( //-------------------------------------exclusive or instruction-------------- this is complete
+//    Thumb,
+//    "YIELD",
+//    (uint16_t)0xbf30,
+//    (uint16_t)0xffff,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0,
+//nullptr     //it is a disassembler function
+//);
+//
+////--/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////--//
+////-------------------------------------------------------- thumb2 32 bits instruction--------------------------------------------------------------------
+//
+//
+//static InstructionDefinition ISB ( //--------------instruction synchronization
+//    Thumb2,
+//    "ISB",
+//    (uint32_t)0xf3b08060,
+//    (uint32_t)0xfff0d0f0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//
+//
+//
+//    CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//    part2.getAffectedRegisters().add("instructionPointer",64);
+//    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+4))+"ULL;";
+//
+//
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+//
+//static InstructionDefinition DMB ( //----------------------data memory-----------------
+//    Thumb2,
+//    "DMB",
+//    (uint32_t)0xf0bf8f50,
+//    (uint32_t)0xfffffff0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+//    static BitArrayRange option (3,0);
+//
+//    int op_tion= option.read(ba);
+//
+//    CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//    part2.getAffectedRegisters().add("instructionPointer",64);
+//    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+4))+"ULL;";
+//
+//
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+//
+//
+//static InstructionDefinition DSB ( //--------------------data synchronization-----------------
+//    Thumb2,
+//    "DSB",
+//    (uint32_t)0xf3bf8f40,
+//    (uint32_t)0xfffffff0,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange option (3,0);
+//
+//    int op_tion= option.read(ba);
+//
+//    CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//    part2.getAffectedRegisters().add("instructionPointer",64);
+//    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+4))+"ULL;";
+//
+//
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+//
+//
+//static InstructionDefinition MRS ( //-------------------------read special register--------------------- used as mrseq
+//    Thumb2,
+//    "MRS",
+//    (uint32_t)0xf3ef8000,
+//    (uint32_t)0xfffff000,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//static BitArrayRange rd (10,8); // ic
+//    static BitArrayRange SYSm (7,0);
+//
+//    int d= rd.read(ba);
+//    int sys_m= SYSm.read(ba);
+//
+//    CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//    part2.getAffectedRegisters().add("instructionPointer",64);
+//    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+4))+"ULL;";
+//
+//
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+//
+//static InstructionDefinition MSR ( //---------------------------------write special register----------------- not used much
+//    Thumb2,
+//    "MSR",
+//    (uint32_t)0xf3808800,
+//    (uint32_t)0xfff0ff00,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//    static BitArrayRange SYSm (7,0);
+//
+//    int sys_m= SYSm.read(ba);
+//
+//
+//    CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//    part2.getAffectedRegisters().add("instructionPointer",64);
+//    part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+4))+"ULL;";
+//
+//
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+//
+//
+//static InstructionDefinition UDFW ( //---------------------------------write special register----------------- not used much
+//    Thumb2,
+//    "UDFW",
+//    (uint32_t)0xf7f0a600,
+//    (uint32_t)0xfff0f000,
+//    [] (BitArray & ba,etiss::CodeSet & cs,InstructionContext & ic) //always return bool value... bitarray contains the instrution .. 16bit
+//{
+//
+// static BitArrayRange imm4 (19,16); // ic
+//    static BitArrayRange imm12 (11,0);
+//
+//    int imm_11= imm4.read(ba);
+//    int imm_12= imm12.read(ba);
+//
+//
+//        CodePart & part2 = cs.append(CodePart::APPENDEDOPTIONAL); // add a code container
+//        part2.getAffectedRegisters().add("instructionPointer",64);
+//        part2.code() = "cpu->instructionPointer = " +toString((uint32_t)(ic.current_address_+2))+"ULL;";
+//
+//    return true;
+//},
+//0, //since there is no group
+//nullptr     //it is a disassembler function
+//
+//);
+
+
+//--/////////////////////////////////////////////////////////////////---Instructions End Here--/////////////////////////////////////////////////////--//
+
+
+void ARMv6MArch::initInstrSet(etiss::instr::ModedInstructionSet & mis) const
+{
+
+    {
+        etiss::instr::ModedInstructionSet iset("ARMv6M");
+        bool ok = true;
+        CortexM0.addTo(iset,ok);
+
+        iset.compile();
+
+        std::cout << iset.print() << std::endl;
+    }
+
+    bool ok = true;
+    CortexM0.addTo(mis,ok);
+    if (!ok)
+        etiss::log(etiss::FATALERROR,"Failed to add instructions for CoretxXX");
+
+    etiss::instr::VariableInstructionSet * vis = mis.get(1);
+    //check if 0
+    vis->length_updater_ = [](VariableInstructionSet &,InstructionContext & ic, BitArray & ba)
+    {
+        if (ba.byteCount() == 4)
+        {
+            return;
+        }
+        else if (ba.byteCount() == 2)
+        {
+            BitArrayRange op(15,13);
+            if (op.read(ba) == 7){
+                ic.is_not_default_width_ = true;
+                ic.instr_width_ = 32;
+                ic.instr_width_fully_evaluated_ = true;
+            } else {
+                ic.is_not_default_width_ = false;
+            }
+        }
+        else
+        {
+            etiss::log(etiss::FATALERROR,"Invalid data passed to ARMv6M architecture");
+        }
+
+    };
+}
+
+
+
+void ARMv6MArch::compensateEndianess(ETISS_CPU * cpu,etiss::instr::BitArray & ba) const
+{
+    void * ptr = ba.internalBuffer();
+    if (ba.byteCount() == 2)
+    {
+        *((uint32_t*)ptr) = ((uint16_t)(*((uint8_t*)ptr))) | ((uint16_t)(*(((uint8_t*)ptr)+1)) << 8);
+    }
+    else if (ba.byteCount() == 4)
+    {
+        *((uint32_t*)ptr) = ((((uint32_t)(*((uint8_t*)ptr))) | ((uint32_t)(*(((uint8_t*)ptr)+1)) << 8)) << 16) | ((uint32_t)(*(((uint8_t*)ptr)+2)) ) | ((uint32_t)(*(((uint8_t*)ptr)+3)) << 8);
+    }
+    else
+    {
+        etiss::log(etiss::FATALERROR,"Endianess cannot be handled",ba.byteCount());
+    }
+}

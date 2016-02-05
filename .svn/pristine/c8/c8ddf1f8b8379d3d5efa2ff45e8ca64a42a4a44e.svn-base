@@ -1,0 +1,62 @@
+
+BUILD_DIR?=.
+
+DEBUG?=1
+
+ifeq ($(DEBUG),0)
+	DBGPARAM= 
+	OPTLEVEL?= -O3 
+else
+	DBGPARAM= -g 
+	OPTLEVEL?= 
+endif
+
+
+
+# Change path as needed
+ETISS_FOLDER=../../
+
+
+
+CFLAGS=-std=c++0x -c -MMD -Wall -Werror -fPIC $(OPTLEVEL) $(DBGPARAM) -DDEBUG=$(DEBUG) -Iinclude -I$(ETISS_FOLDER)/include -I$(ETISS_FOLDER)/include_c
+
+all: $(BUILD_DIR)/libor1ksim.so
+
+SOURCEFILES=$(wildcard src/*.cpp) $(wildcard src/*/*.cpp) $(wildcard src/*/*/*.cpp) $(wildcard src/*/*/*/*.cpp)
+OBJECTFILES=$(SOURCEFILES:src/%.cpp=build/%.o)
+
+or1ksim:
+	git clone https://github.com/openrisc/or1ksim.git --branch or1k-master
+
+or1ksim/compiled: | or1ksim
+	-mkdir or1ksim/build
+	-mkdir or1ksim/compiled
+	-cd or1ksim/build && ../configure --prefix=$(REALPATH)/or1ksim/compiled --exec-prefix=$(REALPATH)/or1ksim/compiled --disable-static --enable-shared --target=or1k-elf --with-pic
+	-cd or1ksim/build && make CFLAGS=-O3 && make install CFLAGS=-O3
+
+src/IncludedFiles.cpp: | or1ksim/compiled
+	python $(ETISS_FOLDER)/includeHeaderCodegen.py -f ./ ./or1ksim/compiled/lib/libsim.so -f ../ ../or1ksim/or1ksim.cfg -mkd ./build/IncludedFiles.cpp.d src/IncludedFiles.cpp -l count -n names -d data -ch include/IncludedFiles.h IncludedFiles.h src/IncludedFiles.cpp
+
+src/IncludedFiles.h: src/IncludedFiles.cpp
+
+build/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+	
+-include *.d
+-include build/*.d
+
+
+libor1ksim.o : libor1ksim.cpp src/IncludedFiles.cpp | or1ksim/compiled
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+$(BUILD_DIR)/libor1ksim.so : $(OBJECTFILES) libor1ksim.o | or1ksim/compiled
+	gcc -std=c++0x -shared -g -o $(BUILD_DIR)/libor1ksim.so libor1ksim.o $(OBJECTFILES) -Wl,--version-script=or1ksimABI.cfg
+	
+clean:
+	rm -f -R build
+	rm -f lobor1ksim.so
+	rm -f lobor1ksim.o
+	rm -f lobor1ksim.d
+	rm -f -R or1ksim/build
+	rm -f -R or1ksim/compiled
+	git clone https://github.com/openrisc/or1ksim.git --branch or1k-master

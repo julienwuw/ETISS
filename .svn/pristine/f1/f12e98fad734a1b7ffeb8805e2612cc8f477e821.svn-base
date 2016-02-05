@@ -1,0 +1,24 @@
+#ifndef VCPUSTRUCT_H_INCLUDED
+#define VCPUSTRUCT_H_INCLUDED
+
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures.h"
+#include "etiss/VirtualStruct.h"
+
+
+
+namespace etiss {
+
+namespace verilator{
+
+std::shared_ptr<etiss::VirtualStruct> getStruct(Vor1200mp_nofeatures * vcore,std::set<tf::TraceableFieldBase*> & tfbs);
+
+/**
+	parses the name of an Virtual struct field for the OR1K. the expected name syntax is SPR[<GROUPID>][<GROUPINDEX>]
+*/
+uint16_t getSPRID(const std::string & name,bool & valid);
+
+}
+
+}
+
+#endif // VCPUSTRUCT_H_INCLUDED

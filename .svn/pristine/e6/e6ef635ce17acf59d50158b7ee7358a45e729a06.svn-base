@@ -1,0 +1,38 @@
+#define ETISS_LIBNAME Verilator
+#include "etiss/helper/PluginLibrary.h"
+#include "etiss/Misc.h"
+
+
+// PLACE INCLUDES HERE
+#include "OR1KVCPU.h"
+
+extern "C" {
+
+	ETISS_LIBRARYIF_VERSION_FUNC_IMPL
+
+	unsigned Verilator_countPlugin(){
+		return 1; ///TODO set number of provided etiss::Plugin implementations
+	}
+	const char * Verilator_namePlugin(unsigned index){
+		switch (index){ ///TODO return name of a etiss::Plugin implementation at the given index
+		case 0:
+			return "OR1KVCPU";
+		default:
+			return "";
+		}
+	}
+	etiss::Plugin * Verilator_createPlugin(unsigned index,std::map<std::string,std::string> options){
+		etiss::Configuration config; config.config() = options; // load the options into a config object for easy access
+		switch (index){ ///TODO return a new instance of a etiss::Plugin implementation at the given index
+		case 0:
+			return new etiss::verilator::OR1KVCPU();
+		default:
+			return 0;
+		}
+	}
+	void Verilator_deletePlugin(etiss::Plugin * ptr){
+		delete ptr; ///TODO check if this works, but in most cases there should be no problem
+	}
+
+
+} // extern C

@@ -1,0 +1,33 @@
+O/OR1KVCPU.o: O/OR1KVCPU.cpp O/OR1KVCPUO.h ../../include/etiss/Plugin.h \
+ ../../include/etiss/ClassDefs.h ../../include_c/etiss/jit/CPU.h \
+ ../../include_c/etiss/jit/types.h ../../include_c/etiss/jit/System.h \
+ ../../include/etiss/CodePart.h ../../include/etiss/Misc.h \
+ /home/gu74ret/work/ETISS/trunk/install/include/etiss/config.h \
+ ../../include/etiss/CPUCore.h ../../include/etiss/LibraryInterface.h \
+ ../../include/etiss/JIT.h ../../include/etiss/CPUArch.h \
+ ../../include/etiss/Instruction.h ../../include/etiss/InterruptVector.h \
+ ../../include/etiss/IntegratedLibrary/gdb/GDBCore.h \
+ ../../include_c/etiss/jit/ReturnCode.h \
+ ../../include/etiss/VirtualStruct.h ../../include/etiss/fault/Injector.h \
+ ../../include/etiss/fault/Fault.h ../../include/etiss/fault/Defs.h \
+ ../../include/etiss/fault/XML.h \
+ ../../include/etiss/fault/xml/pugixml.hpp \
+ ../../include/etiss/fault/xml/pugiconfig.hpp \
+ ../../include/etiss/fault/Trigger.h \
+ ../../include/etiss/fault/InjectorAddress.h \
+ ../../include/etiss/fault/Action.h \
+ ../../include_c/etiss/CVirtualStruct.h ../../include/etiss/Translation.h \
+ ../../include/etiss/System.h ../../include/etiss/InterruptHandler.h \
+ ../../include/etiss/interfaces/Wishbone.h \
+ ../../include/etiss/interfaces/Delegate.h \
+ O/../verilated/or1k/obj_dir/Vor1200mp_nofeatures.h \
+ verilated/include_clean/verilated.h \
+ verilated/include_clean/verilatedos.h include/TraceableField.h \
+ include/TraceableFieldDef.h include/OperationTracing.h \
+ ../../include/etiss/interfaces/Dot.h ../../include/etiss/ObjectPool.h \
+ ../../include/etiss/RefCountedObject.h \
+ ../../include/etiss/FixedSizeHashMap.h \
+ ../../include/etiss/interfaces/VCD.h include/UDefMath.h \
+ include/TraceableFieldBase.h include/ModuleNameExtension.h \
+ O/../verilated/or1k/obj_dir/Vor1200mp_nofeatures__Dpi.h \
+ verilated/include_clean/vltstd/svdpi.h

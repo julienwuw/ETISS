@@ -1,0 +1,18 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node11" [ label="main_sc" shape="house"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node11" -> "node0" // main_sc -> ETISS
+    "node16" [ label="/usr/local/research/projects/SystemDesign/tools/systemc/systemc-2.3.0/lib-linux64/libsystemc.a" shape="ellipse"];
+    "node11" -> "node16" // main_sc -> /usr/local/research/projects/SystemDesign/tools/systemc/systemc-2.3.0/lib-linux64/libsystemc.a
+    "node12" [ label="-lpthread" shape="ellipse"];
+    "node11" -> "node12" // main_sc -> -lpthread
+    "node14" [ label="dl" shape="ellipse"];
+    "node11" -> "node14" // main_sc -> dl
+    "node13" [ label="pthread" shape="ellipse"];
+    "node11" -> "node13" // main_sc -> pthread
+    "node15" [ label="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix/build/libtcc.a" shape="ellipse"];
+    "node11" -> "node15" // main_sc -> /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix/build/libtcc.a
+}

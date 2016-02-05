@@ -1,0 +1,51 @@
+<faults>
+	<fault>
+		<triggers>
+			<trigger type="TIME">
+				<injector>core0</injector>
+				<time_ps>1000000000</time_ps>
+			</trigger>
+		</triggers>
+		<actions>
+			<action type="COMMAND">
+				<injector>core0::OR1KVCPU</injector>
+				<command>boot</command>
+			</action>
+		</actions>
+	</fault>
+	<fault	 id="2" name="TEST">
+		<triggers>
+			<trigger type="META_COUNTER">
+				<count>3</count>
+				<trigger type="VARIABLEVALUE">
+					<injector>core0::OR1KVCPU</injector>
+					<field>ex_pc</field>
+					<value>280</value>
+				</trigger>
+			</trigger>
+		</triggers>
+		<actions>
+			<action type="BITFLIP">
+				<injector>core0::OR1KVCPU</injector>
+				<field>R1</field>
+				<bit>1</bit>
+			</action>
+			<action type="INJECTION">
+				<fault>
+					<triggers>
+						<trigger type="TIMERELATIVE">
+							<injector>core0::OR1KVCPU</injector>
+							<time_ps>10000000</time_ps>
+						</trigger>
+					</triggers>
+					<actions>
+						<action type="COMMAND">
+							<injector>core0::OR1KVCPU</injector>
+							<command>deboot</command>
+						</action>
+					</actions>
+				</fault>
+			</action>
+		</actions>
+	</fault>
+</faults>

@@ -1,0 +1,12 @@
+To get started please run the following commands in a terminal:
+
+$ mkdir install
+$ cd install
+$ cmake ..
+$ make doc
+
+and open the file install/doc/html/index.html in a webbrowser. The mainpage explains how to propperly build ETISS and subprojects.
+
+
+implementation status of the OR32 architecture:
+https://docs.google.com/spreadsheets/d/1BbbDszsa3vRI0pxGgkrSbvH-ye9bHRmfAEO6OwCqSvU/edit?usp=sharing

@@ -1,0 +1,43 @@
+/*! \page makefile_systemc Overview of the systemC Makefile
+
+	The systemc/Makefile builds the example systemc project.<br>
+	There are some (path) variables that may need to be changed for successful compilation. Those variables resolve are dependencies on SystemC and TLM:
+	
+	<pre>
+		
+		SYSTEMC_HOME		must be set to the path of SystemC (version 2.3.0 recommended \ref known_issues "->")
+		TLM_HOME		must be set to the path of TLM
+		SYSTEMC_LIBS		include libraries needed by SystemC
+		TARGET_ARCH		must be set to the target arch (used for resolving path to systemC library in SYSTEMC_HOME)
+		
+		e.g.:
+		
+			SYSTEMC_HOME=/usr/local/research/projects/SystemDesign/tools/systemc/systemc-2.3.0
+			TLM_HOME=/usr/local/research/projects/SystemDesign/tools/systemc/TLM-2009-07-15
+			SYSTEMC_LIBS= -lstdc++ -lm  -lpthread 
+			TARGET_ARCH=linux64
+		
+	</pre>
+
+	This Makefile tries to build ETISS if libETISS.so is not present in "../" .
+	
+	<pre>
+	Important options:
+		
+		DEBUG:		use to configure compilation for a debug/release build (DEBUG=1/0)
+		
+	Important targets:
+	
+		all		default targert. depends on target libs
+		libs		builds libETISS.so and sub projects located in \ref folder_ArchImpl "ArchImpl/", \ref folder_JITImpl "JITImpl/", \ref folder_PluginImpl "PluginImpl/",\ref folder_SW "SW/"
+		main 		builds main.cpp
+		run 		executes compiled main.cpp
+		profile		runs compiled main.cpp with valgrind's callgrind tool
+		memcheck	runs compiled main.cpp with valgrind's memcheck (tests for memory leaks) tool
+		clean		delete object files + library + main
+		cleanall	same as clean with additional execution of "$ make clean" in sub project folders (ArchImpl/?/,JITImpl/?/,SW)
+		
+	</pre>
+
+*/
+

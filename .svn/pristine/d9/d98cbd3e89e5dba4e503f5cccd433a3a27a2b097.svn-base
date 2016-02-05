@@ -1,0 +1,86 @@
+#include "ModuleNameExtension.h"
+
+#include <list>
+#include <set>
+
+namespace tf
+{
+
+static std::list<std::string> mnames;
+static std::string curmname; // cache
+
+bool moduleNamePresent = false;
+
+void pushModuleName(const std::string & name)
+{
+    curmname = "";
+#if !MODULENAMEEXTENSION_ENABLESTACK
+    mnames.clear();
+#endif
+    mnames.push_back(name);
+
+    moduleNamePresent = true;
+
+}
+
+void popModuleName(const std::string & name)
+{
+    curmname = "";
+    if (mnames.size() <= 0)
+    {
+        // error
+    }
+    else
+    {
+        if (mnames.back() != name)
+        {
+            // error
+            // ignored for now
+            mnames.pop_back();
+        }
+        else
+        {
+            mnames.pop_back();
+        }
+    }
+    moduleNamePresent = !mnames.empty();
+}
+
+static std::string mnsep = "::";
+
+void setModuleNameSeperator(const std::string & sep)
+{
+    curmname = "";
+    mnsep = sep;
+}
+
+static std::set<std::string> namestorage;
+
+static std::string _getFullCurrentModuleName()
+{
+    if (curmname.size() > 0)
+        return curmname;
+    if (mnames.empty())
+        return "";
+    std::string ret;
+    for (auto iter = mnames.begin(); iter != mnames.end(); ++iter)
+    {
+        ret = ret + *iter + mnsep;
+    }
+    curmname = ret;
+    return ret;
+}
+
+const char * getFullCurrentModuleName()
+{
+	std::string ret = _getFullCurrentModuleName();
+	auto find = namestorage.find(ret);
+	if (find != namestorage.end()){
+		return find->c_str();
+	} else {
+		namestorage.insert(ret);
+		return namestorage.find(ret)->c_str();
+	}
+}
+
+}

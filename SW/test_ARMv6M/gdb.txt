@@ -1,0 +1,9 @@
+~/SystemDesign/tools/qemu/qemu-1.4.0/bin/qemu-arm -g 123456 isqrt2_ably
+
+~/SystemDesign/tools/arm/gnuarm-4.0.2/bin/arm-elf-gdb
+file isqrt2_ably
+target remote localhost:123456
+break isqrt2_ably_if
+c
+info reg
+step

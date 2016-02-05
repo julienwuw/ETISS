@@ -1,0 +1,27 @@
+# For the C program
+#compile
+#THUMB
+/usr/local/research/projects/SystemDesign/tools/arm/gcc-arm-none-eabi-4_9-2014q4/bin/arm-none-eabi-gcc --specs=nosys.specs -g -o2 -mcpu=cortex-m0 -mthumb isqrt2.c -o code.bin
+
+#decompile 
+#/usr/local/research/projects/SystemDesign/tools/arm/gcc-arm-none-eabi-4_9-2014q4/bin/arm-none-eabi-objdump -D isqrt2 > isqrt2.out
+
+
+
+ARM-32bit
+#emulate on qemu arm
+#~/SystemDesign/tools/qemu/qemu-1.4.0/bin/qemu-arm isqrt2
+
+# for debugging
+1. Run program with debugging port 
+> ~/SystemDesign/tools/qemu/qemu-1.4.0/bin/qemu-arm -g 123456 isqrt2_ably
+2. Run qemu gdb 
+> /usr/local/research/projects/SystemDesign/tools/arm/gcc-arm-none-eabi-4_9-2014q4/bin/arm-none-eabi-gdb
+3. file isqrt2_ably
+gdb>file isqrt2_ably
+gdb>target remote localhost:123456
+gdb>break isqrt2_ably
+gdb>c
+gdb>info reg
+gdb>step
+

@@ -1,0 +1,18 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node6" [ label="ARMv6M" shape="polygon"];
+    "node6" -> "node0" // ETISS -> ARMv6M
+    "node10" [ label="GCCJIT" shape="polygon"];
+    "node10" -> "node0" // ETISS -> GCCJIT
+    "node5" [ label="OR1KArch" shape="polygon"];
+    "node5" -> "node0" // ETISS -> OR1KArch
+    "node7" [ label="TCCJIT" shape="polygon"];
+    "node7" -> "node0" // ETISS -> TCCJIT
+    "node4" [ label="main" shape="house"];
+    "node4" -> "node0" // ETISS -> main
+    "node11" [ label="main_sc" shape="house"];
+    "node11" -> "node0" // ETISS -> main_sc
+}

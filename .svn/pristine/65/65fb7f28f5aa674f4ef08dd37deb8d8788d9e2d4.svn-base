@@ -1,0 +1,257 @@
+#include "OR1KVCPUO.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures.h"
+
+namespace etiss
+{
+namespace interfaces
+{
+
+template<>
+inline bool getBool<uint8_t >(uint8_t & s)
+{
+    return s;
+}
+
+template<>
+inline void setBool<uint8_t >(uint8_t & s,bool val)
+{
+    s = val;
+}
+
+template <>
+/**
+	general helper function to read an address; needs to be implemented as needed
+*/
+uint64_t getAddr<uint32_t >(uint32_t & sig)
+{
+    return sig;
+}
+
+template <>
+uint32_t getData<uint32_t,uint32_t >(uint32_t & sig)
+{
+    return sig;
+}
+
+template <>
+void setData<uint32_t,uint32_t >(uint32_t & sig,uint32_t val)
+{
+    sig = val;
+}
+
+template <>
+uint32_t getSel<uint8_t>(uint8_t & sel_i){
+	return sel_i;
+}
+
+}
+}
+
+static double currentime = 0;
+
+
+double sc_time_stamp()
+{
+    return currentime;
+}
+
+
+namespace etiss
+{
+
+namespace verilator
+{
+
+
+OR1KVCPU::OR1KVCPU()
+{
+
+
+    vcore = new Vor1200mp_nofeatures("vcore");
+
+
+    // create signal maps
+    instrBusSig = new etiss::interfaces::WishboneSignalMap<uint8_t,uint32_t >(
+        vcore->bus_clk_i,
+        vcore->iwb_ack_i,
+        vcore->iwb_err_i,
+        vcore->iwb_rty_i,
+        vcore->iwb_cyc_o,
+        vcore->iwb_stb_o,
+        vcore->iwb_we_o,
+        vcore->iwb_sel_o,
+        vcore->iwb_bte_o,
+        vcore->iwb_cti_o,
+        vcore->iwb_dat_i,
+        vcore->iwb_adr_o,
+        vcore->iwb_dat_o
+    );
+    dataBusSig = new etiss::interfaces::WishboneSignalMap<uint8_t,uint32_t >(
+        vcore->bus_clk_i,
+        vcore->dwb_ack_i,
+        vcore->dwb_err_i,
+        vcore->dwb_rty_i,
+        vcore->dwb_cyc_o,
+        vcore->dwb_stb_o,
+        vcore->dwb_we_o,
+        vcore->dwb_sel_o,
+        vcore->dwb_bte_o,
+        vcore->dwb_cti_o,
+        vcore->dwb_dat_i,
+        vcore->dwb_adr_o,
+        vcore->dwb_dat_o
+    );
+
+    instrBus = 0;
+    dataBus = 0;
+
+    cpu_reset_ = false;
+
+}
+OR1KVCPU::~OR1KVCPU()
+{
+    delete vcore;
+
+    delete instrBusSig;
+    delete dataBusSig;
+}
+
+
+void OR1KVCPU::cycle()
+{
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+    uint64_t pos_cycle_time = plugin_cpu_->cpuCycleTime_ps>>1;
+    uint64_t neg_cycle_time = plugin_cpu_->cpuCycleTime_ps - pos_cycle_time;
+
+    vcore->clk_i = false;
+    vcore->bus_clk_i = false;
+
+    vcore->rst_i = cpu_reset_;
+    vcore->bus_rst_i = cpu_reset_;
+
+
+    instrBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    dataBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    vcore->eval();
+    dataBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+    instrBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+
+
+    plugin_cpu_->cpuTime_ps += neg_cycle_time;
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+
+
+    vcore->clk_i = true;
+    vcore->bus_clk_i = true;
+
+    vcore->rst_i = cpu_reset_;
+    vcore->bus_rst_i = cpu_reset_;
+
+    //// copy variables (READ-IN)
+    instrBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    dataBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+
+    vcore->eval(); // evaluate c++ model
+
+    /// (posibble injection point)
+
+    //// copy variables (WRITE-OUT)
+    dataBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+    instrBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+
+    /// DANGEROUS injection point
+
+    plugin_cpu_->cpuTime_ps += pos_cycle_time;
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+
+}
+
+int32_t OR1KVCPU::execute()
+{
+    std::cout << "<<USING RTL MODEL>>" << std::endl;
+    if (instrBus == 0)
+        instrBus = new etiss::interfaces::WishboneBus<uint8_t,uint32_t,true,true,4,uint32_t>(*instrBusSig,*plugin_system_,*plugin_cpu_);
+
+    if (dataBus == 0)
+        dataBus = new etiss::interfaces::WishboneBus<uint8_t,uint32_t,false,true,4,uint32_t>(*dataBusSig,*plugin_system_,*plugin_cpu_);
+
+	cpu_reset_ = true;
+	cycle();
+	cycle();
+	cpu_reset_ = false;
+
+    uint64_t icount = 0;
+    bool _NOP_EXIT = false;
+    {
+
+        // special snooping function to prevent switch backs for delay slot instructions and to support NOP_EXIT code
+
+        bool delay_slot = false;
+        {
+            instrBus->snoopRead = [&_NOP_EXIT,&delay_slot,&icount](bool /*should never be true*/,const uint64_t & ,uint64_t addr,const uint8_t * buf,unsigned /*should alwys be 4*/)
+            {
+                switch (buf[0]>>2)
+                {
+                case 0x00: //l.j
+                case 0x01: //l.jal
+                case 0x03: //l.bnf
+                case 0x04: //l.bf
+                case 0x11: //l.jr
+                case 0x12: //l.jalr
+                    delay_slot = true;
+                    break;
+                default:
+                    delay_slot = false;
+                    break;
+                }
+                if (buf[0] == 0x15){
+            		if ((buf[2] == 0) && (buf[3] == 1)){
+            			_NOP_EXIT = true;
+            		}
+            	}
+            	icount++;
+            	//std::cout << std::hex << addr << " " << +buf[0] << " " << +buf[2] << " " << +buf[3] << std::endl;
+            };
+        }
+
+        while (!Verilated::gotFinish() && ((!_NOP_EXIT)||delay_slot))
+        {
+            cycle();
+        }
+
+        instrBus->snoopRead = 0; // remove snoopRead (otherwise there could be a seg fault)
+
+    }
+
+    delete instrBus;
+    instrBus = 0;
+    delete dataBus;
+    dataBus = 0;
+
+    std::cout << "icount = " <<std::dec<< icount << std::endl;
+    std::cout << "<<EXIT RTL MODEL>>" << std::endl;
+
+    return _NOP_EXIT?etiss::RETURNCODE::CPUFINISHED:0;
+
+
+
+}
+
+bool OR1KVCPU::interruptWrite(unsigned bit,bool value)
+{
+
+    if (value)
+        vcore->irq = vcore->irq | (1<<bit);
+    else
+        vcore->irq = vcore->irq & ~(1<<bit);
+
+    return true; // prevent interrupt from reaching the etiss cpu
+}
+
+
+
+
+} // verilator
+
+} // etiss
+

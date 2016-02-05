@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++0x -g    CMakeFiles/main.dir/main.cpp.o  -o main -rdynamic libETISS.so -lpthread -lpthread -ldl -Wl,-rpath,/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install 

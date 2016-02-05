@@ -1,0 +1,53 @@
+
+
+TLMU_REALPATH=$(BUILD_DIR)
+
+all: $(TLMU_REALPATH)/tlmu/compiled
+
+$(TLMU_REALPATH)/tlmu:
+	cd $(TLMU_REALPATH) && git clone --branch tlmu-1.4.0 https://github.com/marcgre/tlmu.git
+	
+$(TLMU_REALPATH)/tlmu/build: $(TLMU_REALPATH)/tlmu
+	-mkdir -p $(TLMU_REALPATH)/tlmu/build
+	cd $(TLMU_REALPATH)/tlmu/build && ../configure \
+	--prefix=$(TLMU_REALPATH)/tlmu/compiled \
+	--interp-prefix=$(TLMU_REALPATH)/tlmu/compiled/qemu-%M \
+	--target-list=or32-softmmu \
+	--extra-cflags="-fPIC -g" \
+	--disable-strip \
+	--disable-pie \
+	--disable-spice \
+	--disable-seccomp \
+	--disable-smartcard-nss \
+	--disable-libiscsi \
+	--disable-usb-redir \
+	--disable-guest-agent \
+	--disable-vhost-net \
+	--disable-docs \
+	--disable-blobs \
+	--disable-attr \
+	--disable-linux-aio \
+	--disable-vde \
+	--disable-uuid \
+	--disable-user \
+	--disable-nptl \
+	--disable-kvm \
+	--disable-slirp \
+	--disable-bluez \
+	--disable-fdt \
+	--disable-curl \
+	--disable-curses \
+	--disable-brlapi \
+	--disable-xen \
+	--disable-vnc \
+	--disable-virtfs \
+	--disable-sdl \
+	--disable-debug-tcg
+
+	
+	
+$(TLMU_REALPATH)/tlmu/compiled: $(TLMU_REALPATH)/tlmu/build
+	cd $(TLMU_REALPATH)/tlmu/build && $(MAKE) BUILD_DIR=$(BUILD_DIR)/tlmu/build
+	cd $(TLMU_REALPATH)/tlmu/build && $(MAKE) tlmu BUILD_DIR=$(BUILD_DIR)/tlmu/build
+	-mkdir -p $(TLMU_REALPATH)/tlmu/compiled
+	cd $(TLMU_REALPATH)/tlmu/build && $(MAKE) install-tlmu DESTDIR=$(TLMU_REALPATH)/tlmu/compiled/  BUILD_DIR=$(BUILD_DIR)/tlmu/build

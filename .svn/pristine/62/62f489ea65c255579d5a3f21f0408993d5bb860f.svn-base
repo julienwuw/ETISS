@@ -1,0 +1,1355 @@
+#include "OR1KVCPU.h"
+
+//#include "../ArchImpl/OR1K/OR1K.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures__Dpi.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures__Syms.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200mp_nofeatures.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_top.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_cpu.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_ctrl.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_rf.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_alu.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_sprs.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_except.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_dpram.h"
+
+namespace etiss
+{
+namespace interfaces
+{
+
+bool rtl_poluted = false;
+bool rtl_injected_fault = false;
+}
+}
+
+//extern etiss::VirtualStruct * createVirtualStruct(OR1K * cpu);
+extern "C" {
+	void signal_injected_fault(){
+		etiss::interfaces::rtl_injected_fault = true;
+	}
+}
+
+namespace etiss
+{
+namespace interfaces
+{
+
+
+
+
+template<>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+inline bool getBool<TraceableField<uint8_t> >(TraceableField<uint8_t> & s)
+{
+    if (s.val != s.errval)
+    {
+        	rtl_poluted = true;
+    }
+    return s.errval;
+}
+
+template<>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+inline void setBool<TraceableField<uint8_t> >(TraceableField<uint8_t> & s,bool val)
+{
+    s = val;
+}
+
+template <>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+uint64_t getAddr<TraceableField<uint32_t> >(TraceableField<uint32_t> & s)
+{
+    if (s.val != s.errval)
+    {
+        	rtl_poluted = true;
+    }
+    return s.errval;
+}
+
+template <>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+uint32_t getData<uint32_t,TraceableField<uint32_t> >(TraceableField<uint32_t> & s)
+{
+    if (s.val != s.errval)
+    {
+        	rtl_poluted = true;
+    }
+    return s.errval;
+}
+
+template <>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+void setData<uint32_t,TraceableField<uint32_t> >(TraceableField<uint32_t> & sig,uint32_t val)
+{
+    sig = val;
+}
+
+template <>
+/// template function implemenation to give the wishbone bus transactor template access to TraceableField
+uint32_t getSel<TraceableField<uint8_t> >(TraceableField<uint8_t> & s){
+	if (s.val != s.errval)
+    {
+        	rtl_poluted = true;
+    }
+    return s.errval;
+}
+
+}
+}
+
+static double currentime = 0;
+
+
+double sc_time_stamp()
+{
+    return currentime;
+}
+
+
+namespace etiss
+{
+
+namespace verilator
+{
+
+
+OR1KVCPU::OR1KVCPU() : bench("OR1KVCPU_cycle")
+{
+    etissCoreState = 0;
+    normal_execution_ = false;
+    last_ex_pc_ = 0;
+    icount_ = 0;
+
+    tf::TraceableFieldBase::instances_.clear();
+    tf::TraceableFieldBase::instances_register_ = true; // enable registration
+    vcore = new Vor1200mp_nofeatures("vcore");
+    tf::TraceableFieldBase::instances_register_ = false; // stop registration
+    fields_ = tf::TraceableFieldBase::instances_; // copy all RTL fields
+    std::string pff = etiss::cfg().get<std::string>("OR1KVCPU::printFields","");
+    if (!pff.empty()){ // print all fields to the specified file
+        ofstream pffs;
+        pffs.open(pff.c_str());
+        for (auto ptr : fields_)
+        {
+            if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+            {
+                if ((ptr->getName()[0] == '_') && (ptr->getName()[1] == '_') && (ptr->getName()[2] == 'P') && (ptr->getName()[3] == 'V') && (ptr->getName()[4] == 'T') && (ptr->getName()[5] == '_') && (ptr->getName()[6] == '_')){
+                    std::string wname = std::string("__Vdly__")+std::string(ptr->getName()).substr(7);
+                    bool found = false;
+                    for(auto ptr : fields_){
+                        if (wname == ptr->getName()){
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        continue;
+                }
+                if ((ptr->getName()[0] == '_') && (ptr->getName()[1] == '_') && (ptr->getName()[2] == 'V') && (ptr->getName()[3] == 'd') && (ptr->getName()[4] == 'l') && (ptr->getName()[5] == 'y') && (ptr->getName()[6] == '_') && (ptr->getName()[7] == '_')){
+                    continue;
+                }
+                {
+                    std::vector<std::string> forbidden;
+                    forbidden.push_back("iwb");
+                    forbidden.push_back("dwb");
+                    forbidden.push_back("clk");
+                    forbidden.push_back("rst");
+                    bool found = false;
+                    for (auto f : forbidden){
+                        if (std::string(ptr->getName()).find(f) != std::string::npos){
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        continue;
+                }
+                pffs << ptr->getFullName() << "\n";
+            }
+        }
+        pffs.flush();
+        pffs.close();
+    }
+
+
+
+    // create signal maps
+    instrBusSig = new etiss::interfaces::WishboneSignalMap<TraceableField<uint8_t>,TraceableField<uint32_t> >(
+        vcore->bus_clk_i,
+        vcore->iwb_ack_i,
+        vcore->iwb_err_i,
+        vcore->iwb_rty_i,
+        vcore->iwb_cyc_o,
+        vcore->iwb_stb_o,
+        vcore->iwb_we_o,
+        vcore->iwb_sel_o,
+        vcore->iwb_bte_o,
+        vcore->iwb_cti_o,
+        vcore->iwb_dat_i,
+        vcore->iwb_adr_o,
+        vcore->iwb_dat_o
+    );
+    dataBusSig = new etiss::interfaces::WishboneSignalMap<TraceableField<uint8_t>,TraceableField<uint32_t> >(
+        vcore->bus_clk_i,
+        vcore->dwb_ack_i,
+        vcore->dwb_err_i,
+        vcore->dwb_rty_i,
+        vcore->dwb_cyc_o,
+        vcore->dwb_stb_o,
+        vcore->dwb_we_o,
+        vcore->dwb_sel_o,
+        vcore->dwb_bte_o,
+        vcore->dwb_cti_o,
+        vcore->dwb_dat_i,
+        vcore->dwb_adr_o,
+        vcore->dwb_dat_o
+    );
+
+    instrBus = 0;
+    dataBus = 0;
+
+    cpu_reset_ = false;
+
+	// add fields to a VirtualStruct
+    vcoreState = getStruct(vcore,fields_);
+
+    run_model_ = false;
+    // add a callback to support the custom actions "boot" and "deboot" (= switch to RTL/ switch back to ISS)
+    vcoreState->applyCustomAction = [this](const etiss::fault::Fault &,const etiss::fault::Action & a,std::string & ){
+        if (a.getType() != etiss::fault::Action::COMMAND)
+            return false;
+        const std::string cmd = a.getCommand();
+        if (cmd == "boot"){
+            run_model_ = true;
+        }
+        if (cmd == "deboot"){
+            run_model_ = false;
+        }
+        return true;
+    };
+
+}
+OR1KVCPU::~OR1KVCPU()
+{
+    delete vcore;
+
+    delete instrBusSig;
+    delete dataBusSig;
+}
+
+void OR1KVCPU::addedToCPUCore(etiss::CPUCore * core)
+{
+    core->getStruct()->mountStruct(_getPluginName(),vcoreState); // mount VirtualStruct to be addressable (e.g. core0::OR1KVCPU.somefield)
+    etissCoreState = core->getStruct();
+}
+void OR1KVCPU::removedFromCPUCore(etiss::CPUCore * core)
+{
+    vcoreState->close();
+}
+
+// shared registers are assumed to be defined/valid during boot and are required to stay defined during simulation; they also have one val/errorval
+static bool isSharedRegister(const char * cname)
+{
+
+    static std::set<std::string> regs(
+    {
+        "clk_i",
+        "rst_i",
+        "mem0",
+        "mem1",
+        "mem2",
+        "mem3",
+        "mem4",
+        "mem5",
+        "mem6",
+        "mem7",
+        "mem8",
+        "mem9",
+        "mem10",
+        "mem11",
+        "mem12",
+        "mem13",
+        "mem14",
+        "mem15",
+        "mem16",
+        "mem17",
+        "mem18",
+        "mem19",
+        "mem20",
+        "mem21",
+        "mem22",
+        "mem23",
+        "mem24",
+        "mem25",
+        "mem26",
+        "mem27",
+        "mem28",
+        "mem29",
+        "mem30",
+        "mem31",
+
+        "sr",
+        "epcr",
+        "eear",
+        "esr",
+
+        "__PVT__or1200_immu_top__DOT__icpu_adr_default", // iimu removed -> default addr
+        "__PVT__icpu_adr_immu", // same as above
+        "__PVT__icpu_adr_o", // if_pc counter // set to defined by
+
+        "__PVT__dcpu_adr_dmmu", //dmmu removed -> default addr
+        "__PVT__dcpu_adr_o", // circular dependency // may serve as dbus address
+
+        "__PVT__trace_trap", //possibly some debug if leftover
+
+        //"__PVT__rt_we_allow",
+
+        "__PVT__or1200_ic_top__DOT__or1200_ic_fsm__DOT__saved_addr_r", // fsm state (depends on itself)
+
+        "__PVT__or1200_if__DOT__save_insn", // internal state variable
+
+        "__PVT__state", // fsm
+
+        "__PVT__or1200_genpc__DOT__pcreg_select",
+
+        "__PVT__or1200_tt__DOT__ttcr",
+
+        "__PVT__or1200_tt__DOT__ttmr",
+
+        "__PVT__or1200_pic__DOT__picsr",
+
+        "__PVT__or1200_pic__DOT__picmr",
+
+        "except_type", //depends on itself
+
+        //"id_pc",
+
+        //"ex_pc",
+
+        //"wb_pc",
+
+        "__PVT__or1200_ic_top__DOT__or1200_ic_fsm__DOT__state",
+
+        "irq", // input
+
+        "__PVT__to_sr", // internal copy of sr value
+
+        "__PVT__or1200_if__DOT__if_bypass", //not written to
+
+        "__PVT__sr_reg_bit_eph_select", // cyclic dependecy
+
+        "__PVT__or1200_genpc__DOT__wait_lsu", // read only
+
+        "__PVT__or1200_operandmuxes__DOT__saved_a", // read only
+
+        "__PVT__or1200_operandmuxes__DOT__saved_b", // read only
+
+        "ex_dslot", // strange selfdep
+
+        "__PVT__sr_reg",
+
+        "__PVT__extend_flush",
+
+        "__PVT__or1200_genpc__DOT__pcreg",
+
+        "__Vdly__or1200_mult_mac__DOT__mul_stall_count"
+
+
+    });
+
+    std::string name = cname;
+
+    if (name.find("(1)") == 0) // remove "(1)" prefix
+        name = name.substr(3);
+
+    if (regs.find(name) != regs.end())
+        return true;
+
+    if (name.find("__PVT__") == 0) // remove "__PVT__" prefix (created by VERILATOR)
+        name = name.substr(7);
+
+    if (regs.find(name) != regs.end())
+        return true;
+
+    // take out buses (not present in ETISS)
+    if (name.find("iwb") != std::string::npos)
+    {
+        return true;
+    }
+	// immu disable (left over registers)
+    if (name.find("immu") != std::string::npos)
+        return true;
+	// dmmu disable (left over registers)
+    if (name.find("dmmu") != std::string::npos)
+        return true;
+	// take out buses (not present in ETISS)
+    if (name.find("dwb") != std::string::npos)
+    {
+        return true;
+    }
+	// clk and reset signals are defined
+    if (name.find("clk") != std::string::npos)
+        return true;
+    if (name.find("rst") != std::string::npos)
+        return true;
+
+    // take out spr
+    if (name.find("spr_dat") != std::string::npos)
+        return true;
+
+    // ignore stalls
+    if (name.find("_freeze") != std::string::npos)
+        return true;
+
+    //if (name.find("rf_") != std::string::npos)
+    //	return true;
+	
+	// current instruction(none) can be ignored since after a reset we are the only one to insert instructions
+    if (name.find("_insn") != std::string::npos)
+        return true;
+
+
+    return false;
+}
+
+static bool isDefined(const char * cname)
+{
+    static std::set<std::string> regs(
+    {
+        "__PVT__id_flushpipe", // reset
+        "__PVT__id_void",
+        "__PVT__rfwb_op" // disabled unit
+    });
+
+    std::string name = cname;
+
+    if (name.find("(1)") == 0)
+        name = name.substr(3);
+
+    if (regs.find(name) != regs.end())
+        return true;
+
+
+    return false;
+
+}
+
+/**
+	etiss::interfaces::SimpleInstuctionInjector<> defines helper functions of the type std::list<INT>(INT i) that can be used to generate and append instructions to the list of instructions of etiss::interfaces::SimpleInstuctionInjector<>
+
+*/
+static void addHelpers(etiss::interfaces::SimpleInstuctionInjector<uint32_t> & sii)
+{
+	//test
+    sii.setHelper(666,[](uint32_t)
+    {
+        std::list<uint32_t> ret;
+        /*
+            ret.push_back(0xE0200000 ); //l.add r1,r0,r0
+            ret.push_back(0xE0200306 ); //l.mul r1,r0,r0
+            ret.push_back(0x9C200001 ); //l.addi r1,r0,1
+            ret.push_back(0xE0200B09 ); //l.div r1,r0,r1
+            ret.push_back(0x22800000 ); // l.psync
+        */
+        return ret;
+    });
+
+	// write value to r3
+    sii.setHelper(64,[](uint32_t mtspr_val_r3)
+    {
+        std::list<uint32_t> ret;
+
+        ret.push_back(0x18600000 | (mtspr_val_r3>>16)); //l.movhi r3, mtspr_val_r3[31:16]
+        ret.push_back(0xA8630000 | (mtspr_val_r3&0x0000FFFF)); //l.ori r3, mtspr_val_r3[15:0]
+
+        return ret;
+    });
+
+	// copy value from r3 to an SPR register
+    sii.setHelper(65,[](uint32_t mtspr_r3_dst)
+    {
+        std::list<uint32_t> ret;
+
+        if (mtspr_r3_dst == ((5<<11) + 1))
+            ret.push_back(0xA8630000 | 1);
+        if (mtspr_r3_dst == ((5<<11) + 2))
+            ret.push_back(0xA8630000 | 2);
+
+        ret.push_back(0xC0001800 | ((mtspr_r3_dst<<21)&0x03E00000) | (mtspr_r3_dst&0x000007FF) ); //l.mtspr r0,r3,mtspr_r3_dst[15:0]
+
+        return ret;
+    });
+
+    // helper to jump to an address; ATTENTION: overwrites register 9
+    sii.setHelper(128,[](uint32_t jmpaddr)
+    {
+        std::list<uint32_t> ret;
+
+        jmpaddr = jmpaddr - (12*4); // matches the 12 instructions from helper no. 129
+
+        //std::cout << "jmpaddr " << jmpaddr << std::endl;
+
+        ret.push_back(0x18000000 | (9<<21) | (jmpaddr>>16)); //l.movhi r9, jmpaddr[31:16]
+        ret.push_back(0xA8000000 | (9<<21) | (9<<16) | (jmpaddr&0x0000FFFF)); //l.ori r9, jmpaddr[15:0]
+        ret.push_back(0x44000000 | (9<<11) ); //l.jr r9
+        ret.push_back(0x15000000 ); //l.nop
+
+        return ret;
+    });
+
+	// finalize boot code by restoring r9 from the ISS and inserting l.nop instructions
+    sii.setHelper(129,[](uint32_t r9_val)
+    {
+        std::list<uint32_t> ret;
+
+        ret.push_back(0x18000000 | (9<<21) | (r9_val>>16)); //l.movhi r9, r9_val[31:16]
+        ret.push_back(0xA8000000 | (9<<21) | (9<<16) | (r9_val&0x0000FFFF)); //l.ori r9, r9_val[15:0]
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+        ret.push_back(0x15000000 ); //l.nop
+
+        return ret;
+    });
+
+    // helpers to write register values
+    for (uint32_t i = 0; i<32; i++)
+    {
+        sii.setHelper(i,[i](uint32_t val)
+        {
+            std::list<uint32_t> ret;
+
+            //std::cout << "R" << i << ": 0x" << std::hex << val << std::dec << std::endl;
+
+            ret.push_back(0x18000000 | (i<<21) | (val>>16)); //l.movhi r3, val[31:16]
+            ret.push_back(0xA8000000 | (i<<21) | (i<<16) | (val&0x0000FFFF)); //l.ori r3, val[15:0]
+
+            return ret;
+        });
+    }
+
+    unsigned doff = 512;
+    // deboot prep helper
+    sii.setHelper(doff,[](uint32_t)
+    {
+        std::list<uint32_t> ret;
+
+        ret.push_back(0x15000000); //l.nop (to avoid delay slot conflicts
+        ret.push_back(0x22800000); //l.psync ///TODO use address backward jump to calculate cycles after l.psync
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x20000000); // change to supervisor mode
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+        ret.push_back(0x15000000); //l.nop (safeguard against detection faults of l.psync end)
+
+        return ret;
+    });
+
+	//copy SPR valu to r3
+    sii.setHelper(doff+1,[](uint32_t sprid)
+    {
+        std::list<uint32_t> ret;
+
+        ret.push_back(0xB4000000 | (3<<21) | (0<<16) | (uint16_t) sprid); // move spr value to r3
+        ret.push_back(0x18000000 | (4<<21) | ((sprid<<2)>>16)); //l.movhi r4, addr
+        ret.push_back(0xA8000000 | (4<<21) | (4<<16) | ((sprid<<2)&0x0000FFFF)); //l.ori r4, addr
+        ret.push_back(0xD4000000 | (4<<16) | (3<<11));
+        return ret;
+    });
+
+	// add l.nop operations
+    sii.setHelper(doff+2,[](uint32_t)
+    {
+        std::list<uint32_t> ret;
+
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+        ret.push_back(0x15000000); //l.nop (safeguard)
+
+        return ret;
+    });
+
+}
+
+static void writeBootCode(ETISS_CPU * cpu__,etiss::VirtualStruct * vs,etiss::interfaces::SimpleInstuctionInjector<uint32_t> & sii,etiss::VirtualStruct * vcoreState)
+{
+    //OR1K * cpu = (OR1K*) cpu__;
+
+    //zero gprs
+    for (unsigned i = 0; i<32; i++)
+    {
+        sii.appendWithHelper(i,0);
+    }
+    sii.appendWithHelper(666,0);
+    //write sprs
+    /*
+    //mac
+    sii.appendWithHelper(64,cpu->SPR[5][1]);
+    sii.appendWithHelper(65,( 5 << 11 ) | 1);
+    sii.appendWithHelper(64,cpu->SPR[5][2]);
+    sii.appendWithHelper(65,( 5 << 11 ) | 2);
+    //sr
+    sii.appendWithHelper(64,cpu->SPR[0][17]);
+    sii.appendWithHelper(65,( 0 << 11 ) | 17);
+    //pic
+    sii.appendWithHelper(64,cpu->SPR[9][0]);
+    sii.appendWithHelper(65,( 9 << 11 ) | 0);
+    sii.appendWithHelper(64,cpu->SPR[9][2]);
+    sii.appendWithHelper(65,( 9 << 11 ) | 2);
+    //timer
+    sii.appendWithHelper(64,cpu->SPR[10][0]);
+    sii.appendWithHelper(65,( 10 << 11 ) | 0);
+    sii.appendWithHelper(64,cpu->SPR[10][1]);
+    sii.appendWithHelper(65,( 10 << 11 ) | 1);
+    //sr
+    sii.appendWithHelper(64,cpu->SPR[0][17]);
+    sii.appendWithHelper(65,( 0 << 11 ) | 17);
+    */
+    //etiss::VirtualStruct * vs = createVirtualStruct(cpu); ///TODO update as soon as virtual struct is used in api
+
+	// iterate oover all spr registers of the RTL model and add the boot code
+    vcoreState->foreachField([&](std::shared_ptr<VirtualStruct::Field> field)
+    {
+        if ((!(field->flags_&etiss::VirtualStruct::Field::P)) && ((field)->name_ != "SPR[0][17]"))   // sr must be copied last
+        {
+            uint32_t val = vs->findName((field)->name_)->read();
+            bool valid = false;
+            uint32_t sprid = etiss::verilator::getSPRID((field)->name_,valid);
+            if (valid)
+            {
+                sii.appendWithHelper(64,val);
+                sii.appendWithHelper(65,sprid);
+            }
+            else
+            {
+                //std::cout << "not an spr register: " << (*iter)->name_ << std::endl;
+            }
+        }
+    });
+
+
+
+
+
+    //write gprs
+    for (unsigned i = 0; i<32; i++)
+    {
+        sii.appendWithHelper(i,(uint32_t)vs->findName(std::string("R")+etiss::toString(i))->read());
+    }
+
+    //append sr
+    {
+        uint32_t val = vs->findName("SPR[0][17]")->read();
+        bool valid = false;
+        uint32_t sprid = etiss::verilator::getSPRID("SPR[0][17]",valid);
+        if (valid)
+        {
+            sii.appendWithHelper(64,val);
+            sii.appendWithHelper(65,sprid);
+        }
+        else
+        {
+            std::cout << "not an spr register: " << "SPR[0][17]" << std::endl;
+        }
+    }
+
+    //jump and restore r9
+    sii.appendWithHelper(128,(uint32_t)cpu__->instructionPointer);
+    sii.appendWithHelper(129,(uint32_t)vs->findName(std::string("R9"))->read());
+
+
+}
+
+//static int callcount = 0;
+
+// execute on cycle of the CPU
+void OR1KVCPU::cycle()
+{
+    bench.start();
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+    uint64_t pos_cycle_time = plugin_cpu_->cpuCycleTime_ps>>1;
+    uint64_t neg_cycle_time = plugin_cpu_->cpuCycleTime_ps - pos_cycle_time;
+
+    vcore->clk_i = false;
+    vcore->bus_clk_i = false;
+
+    vcore->rst_i = cpu_reset_;
+    vcore->bus_rst_i = cpu_reset_;
+
+
+    instrBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    dataBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    vcore->eval();
+    dataBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+    instrBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+
+
+    plugin_cpu_->cpuTime_ps += neg_cycle_time;
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+
+
+    vcore->clk_i = true;
+    vcore->bus_clk_i = true;
+
+    vcore->rst_i = cpu_reset_;
+    vcore->bus_rst_i = cpu_reset_;
+
+    //// copy variables (READ-IN)
+    instrBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+    dataBus->update(plugin_cpu_->cpuTime_ps,true,cpu_reset_);
+
+    /// injection point
+    if (normal_execution_){
+		vcoreState->cycleAccurateCallback(plugin_cpu_->cpuTime_ps);
+		if ( plugin_cpu_->instructionPointer != tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_except->get_ex_pc())){ // if instruction pointer changed than the next instruction has been reached
+		    plugin_cpu_->instructionPointer =  tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_except->get_ex_pc());
+		    ///TODO? copy all registers?
+		    etissCoreState->instructionAccurateCallback(plugin_cpu_->cpuTime_ps);
+		}
+    }
+
+
+
+    vcore->eval(); // evaluate c++ model
+
+    /// (posibble injection point)
+
+    //// copy variables (WRITE-OUT)
+    dataBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+    instrBus->update(plugin_cpu_->cpuTime_ps,false,cpu_reset_);
+
+    /// DANGEROUS injection point
+
+    plugin_cpu_->cpuTime_ps += pos_cycle_time;
+    currentime = plugin_cpu_->cpuTime_ps / 1000000000000.0;
+
+    bench.stop();
+
+    if (false && bench.interval_ns.size() > 1000)
+    {
+        etiss::log(etiss::INFO,"Benchmark result",bench);
+        bench.interval_ns.clear();
+    }
+
+}
+
+// copy state from ISS
+void OR1KVCPU::boot()
+{
+
+    ofstream mac_out;
+    mac_out.open("mac_r");
+
+    etiss::interfaces::dot::ValueOperationTraceGraphStreamer votgs("/media/1BEC-2957/boot_opdep.dot","/media/1BEC-2957/boot_dep.dot"); // streams the graph
+    tf::trace::valueOperationTraceGraphStreamer = &votgs; // activate graph streaming; this parameter is used in tf::operation()
+
+	// custom function to set variable nodes attributes
+    /*votgs.setCurrentNodeAttr = [](etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Node * n)
+    {
+        tf::TraceableFieldBase * tfb = (tf::TraceableFieldBase *) n->id;
+        if (tfb->getUDefMasks().first || tfb->getUDefMasks().second)
+            n->color = "red";
+        else
+            n->color = "green";
+
+        n->time = sc_time_stamp()*1000000000000.0;
+
+        if (tfb->modulePrefix)
+            n->cluster = tfb->modulePrefix;
+
+    };
+
+	// set the attributes of a link that spans between two declared nodes and intermediate temporary nodes
+    votgs.setMetaLinkAttr = [](etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link * l,const etiss::ExpandingNativeStack<etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link*,1000> & path)
+    {
+
+        if (strcmp(l->src->color , "green"))
+        {
+            l->color = "green";
+        }
+        else
+        {
+            if (strcmp(l->dst->color,"red"))
+            {
+                l->color = "red";
+            }
+            else
+            {
+                l->color = "gray";
+            }
+        }
+
+    };
+    */
+
+	// instruction injector for boot code
+    etiss::interfaces::SimpleInstuctionInjector<uint32_t> sii;
+    // add some helper callacks
+    addHelpers(sii);
+    // generate boot code for injection
+    writeBootCode(plugin_cpu_,etissCoreState.get(),sii,vcoreState.get());
+    // swap little endian to big endian
+    sii.swapEndianness();
+    // store arresses of injected instructions in a list
+    sii.logInjectionAddresses(true);
+    // add the injecto to the instruction bus
+    instrBus->injectedRead = sii.toFunction();
+
+	// similar to graph streaming this class creates a graph of any dependency within the modes
+    etiss::interfaces::dot::VariableDependencyGraph vdg;
+    //tf::trace::variableDependencyGraph = &vdg; // comment out to disable generation of this graph
+	// writes a VCD trace
+    etiss::interfaces::VCD vcd("boot.vcd");
+    std::set<const void *> poi; // TESTING
+    std::map<const void *,std::string> poin;  // TESTING
+
+
+    ofstream udef_out;
+    udef_out.open("udef_out");
+    // apply flags
+    for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+    {
+        tf::TraceableFieldBase * ptr = *iter;
+        if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+        {
+            vdg.declare((void*)ptr,ptr->getFullName()); // declare variables so that the graph generator knows which nodes are not temporary
+            votgs.defineNode(ptr,ptr->getFullName()); // declare variables so that the streamer knows which nodes are not temporary
+            vcd.declare(*ptr,ptr->getFullName(),ptr->width_,0,false); // enable VCD trace for a field
+            ptr->vcd = 0;//&vcd; // enable updating of the field for tracing (set to 0 to disable)
+            if (std::string(ptr->getName()).find("__DOT__mac_r") != std::string::npos)  // TESTING
+            {
+                poi.insert(ptr);
+            }
+            poin.insert(std::pair<const void*,std::string>(ptr,std::string(ptr->getName())));
+            // set flags
+            if (isSharedRegister(ptr->getName()))
+            {
+                ptr->flags(tf::flags::ALWAYSDEFINED | tf::flags::VALISERRVAL); 
+            }
+            else if (isDefined(ptr->getName()))
+            {
+                ptr->flags(tf::flags::ALWAYSDEFINED);
+            }
+            else
+            {
+                udef_out << ptr->getName() << std::endl;
+            }
+        }
+    }
+    udef_out.flush();
+    udef_out.close();
+
+	// custom path writer for the graph streamer
+    /*
+    votgs.custWritePath = [&mac_out,&poi,&poin](const etiss::ExpandingNativeStack<etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link*,1000> & path)
+    {
+        if (poi.find(path.front()->dst->id) != poi.end())
+        {
+            mac_out << sc_time_stamp() << "s: " << poin[path.back()->src->id];
+            for (ssize_t iter = path.pos(); iter > 0; --iter)
+            {
+                mac_out << " -> " << (path[iter])->label;
+            }
+            mac_out << " -> " << poin[path.front()->dst->id] << std::endl;
+        }
+    };
+    */
+
+    //reset for 2 cycles
+    cpu_reset_ = true;
+    cycle();
+    cycle();
+    cpu_reset_ = false;
+
+    // set undefined
+    for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+    {
+        tf::TraceableFieldBase * ptr = *iter;
+        if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+        {
+            if ((!isSharedRegister(ptr->getName())) && (!isDefined(ptr->getName())))
+            {
+                ptr->setUDefMasks(-1,-1);
+                //std::cout << "setting " << ptr->getName() << " to undefined" << std::endl;
+            }
+        }
+    }
+
+    // run model until code is injected
+    while (!sii.injectionFinished())
+    {
+        cycle();
+        votgs.flush();
+    }
+
+	// set flags of fields
+    for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+    {
+        tf::TraceableFieldBase * ptr = *iter;
+        if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+        {
+            ptr->vcd = 0;
+            if (isSharedRegister(ptr->getName()))
+            {
+                ptr->flags(tf::flags::UNDEFINEDISERROR_WEAK | tf::flags::VALISERRVAL);
+            }
+            else
+            {
+                ptr->flags(0);
+            }
+        }
+    }
+
+    tf::trace::variableDependencyGraph = 0; // remove graph
+    tf::trace::valueOperationTraceGraphStreamer = 0; // remove graph
+
+    vdg.tf_write("/media/1BEC-2957/boot.dot"); // write out VCD trace
+
+}
+
+void OR1KVCPU::deboot()
+{
+
+
+    etiss::interfaces::dot::ValueOperationTraceGraphStreamer votgs("/opdep.dot","/opdep");
+    etiss::interfaces::dot::VariableDependencyGraph vdg;
+    //tf::trace::variableDependencyGraph = &vdg;
+    //tf::trace::valueOperationTraceGraphStreamer = &votgs;
+    etiss::interfaces::VCD vcd("/deboot.vcd");
+    tf::trace::vcd = &vcd;
+
+    votgs.setCurrentNodeAttr = [](etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Node * n)
+    {
+        tf::TraceableFieldBase * tfb = (tf::TraceableFieldBase *) n->id;
+        if (tfb->getUDefMasks().first || tfb->getUDefMasks().second)
+            n->color = "red";
+        else
+            n->color = "green";
+
+        n->time = sc_time_stamp()*1000000000000.0;
+
+        if (tfb->modulePrefix)
+            n->cluster = tfb->modulePrefix;
+
+    };
+
+    votgs.setMetaLinkAttr = [](etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link * l,const etiss::ExpandingNativeStack<etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link*,1000> & path)
+    {
+        size_t pos = 0;
+        for (ssize_t iter = 0; (iter < path.size()) && (pos < 256 /*l->label_size*/); ++iter)
+        {
+            if (pos > 0)
+                l->label[pos++] = ',';
+            size_t lpos = 0;
+            while ((pos < (etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link::label_size-1)) && path[iter]->label[lpos] && (lpos < (etiss::interfaces::dot::ValueOperationTraceGraphStreamer::Link::label_size-1)))
+            {
+                l->label[pos++] = path[iter]->label[lpos++];
+            }
+        }
+        l->label[pos++] = 0;
+
+        if (strcmp(l->src->color,"green"))
+        {
+            l->color = "green";
+        }
+        else
+        {
+            if (strcmp(l->dst->color , "red"))
+            {
+                l->color = "red";
+            }
+            else
+            {
+                l->color = "gray";
+            }
+        }
+
+    };
+
+    for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+    {
+        tf::TraceableFieldBase * ptr = *iter;
+        if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+        {
+            vdg.declare((void*)ptr,ptr->getFullName());
+            votgs.defineNode((void*)ptr,ptr->getFullName());
+            vcd.declare(*ptr,ptr->getFullName(),ptr->width_,0,false);
+            ptr->vcd = 0;//&vcd;
+        }
+    }
+
+	// copy GPR registers
+    for (int i = 0; i<32; i++)
+    {
+        std::string anem = std::string("R")+etiss::toString(i);
+        auto f = vcoreState->findName(anem);
+        auto fd = etissCoreState->findName(anem);
+        if (f == 0)
+        {
+            etiss::log(etiss::FATALERROR,"Failed to read register",std::string(std::string("R")+etiss::toString(i)));
+            continue;
+        }
+        if (fd == 0)
+        {
+            etiss::log(etiss::FATALERROR,"Failed to write register",std::string(std::string("R")+etiss::toString(i)));
+            continue;
+        }
+        fd->write(f->read()); // read gpr
+
+    }
+
+    std::set<std::string> manuallyCopied;
+	// copy four SPR registers manually
+    etissCoreState->findName("SPR[0][17]")->write(vcoreState->findPrettyName("SR")->read()); // read sr
+    manuallyCopied.insert("SR");
+    manuallyCopied.insert("SPR[0][17]");
+    etissCoreState->findName("SPR[0][32]")->write(vcoreState->findName("SPR[0][32]")->read()); // read EPCR
+    manuallyCopied.insert("EPCR0");
+    manuallyCopied.insert("SPR[0][32]");
+    etissCoreState->findName("SPR[0][64]")->write(vcoreState->findName("SPR[0][64]")->read()); // read ESR
+	manuallyCopied.insert("ESR0");
+    manuallyCopied.insert("SPR[0][64]");
+    etissCoreState->findName("SPR[0][48]")->write(vcoreState->findName("SPR[0][48]")->read()); // read EEAR
+    manuallyCopied.insert("EEAR0");
+    manuallyCopied.insert("SPR[0][48]");
+
+
+
+    // prepare memory for etiss state structure
+    etiss::VirtualStruct * vs = etissCoreState.get();
+    etiss::plugin::VirtualStructMemory vsm(*vs,
+                                           [](etiss::VirtualStruct::Field * f,bool & dontMount)
+    {
+        bool valid;
+        uint64_t ret = etiss::verilator::getSPRID(f->name_,valid);
+        dontMount = !valid;
+        return ret<<2;
+    },
+    true);
+
+	// force cpu into a safe state to extract state
+    etiss::interfaces::SimpleInstuctionInjector<uint32_t> sii;
+    addHelpers(sii);
+    sii.logInjectionAddresses(true); // store addresses // use first address as ne pc value
+    sii.appendWithHelper(512,0); // force cpu into a safe state to extract state; enable supervisor bit (note: REQUIRES reading of the sr register before making this change)
+    sii.swapEndianness(); // apply right endianness
+    instrBus->injectedRead = sii.toFunction();
+
+	// run code to force cpu into a safe state to extract state
+    while (!sii.injectionFinished())
+        cycle();
+
+	
+    std::set<etiss::VirtualStruct::Field*> fields = vsm.getMappedFields();
+	// generate copy code
+    for (auto iter = fields.begin(); iter != fields.end(); ++iter)
+    {
+        if ((manuallyCopied.find((*iter)->name_) == manuallyCopied.end()) && manuallyCopied.find((*iter)->prettyname_) == manuallyCopied.end() )
+        {
+            bool valid;
+            uint16_t sprid = etiss::verilator::getSPRID((*iter)->name_,valid);
+            if (!valid)
+            {
+                etiss::log(etiss::ERROR,"invalid spr name encountered",ETISS_SRCLOC);
+                continue;
+            }
+            if (vcoreState->findName((*iter)->name_))
+                sii.appendWithHelper(513,sprid);
+        }
+    }
+
+
+    sii.swapEndianness(); // apply right endianness
+    instrBus->injectedRead = sii.toFunction(); // add injector to instruction bus
+    //redirect data bus to mountes ISS variables
+    dataBus->redirectedWrite = [&vsm,&plugin_cpu_](bool ibus,uint64_t & time_ps,uint64_t addr,uint8_t *buf,unsigned len,bool & continu,bool & handleNormal)
+    {
+        continu = true;
+        handleNormal = false;
+        if ( (addr >= vsm.startAddr()) && (addr <= vsm.endAddr()))
+        {
+            //if (addr+len > vsm.endAddr()){
+            //	TODO
+            //}
+            std::cout << "writing to address 0x" << std::hex << addr << " len: " << len << std::endl;
+            return vsm.write(false,plugin_cpu_,addr,buf,len);
+        }
+        else
+        {
+            handleNormal = true;
+            return true;
+        }
+    };
+
+	// inject copy code
+    while (!sii.injectionFinished())
+        cycle();
+
+    dataBus->redirectedWrite = 0;
+
+    plugin_cpu_->instructionPointer = sii.injectionAddresses().front();
+    std::cout << "<<continuing from address 0x" << std::hex << plugin_cpu_->instructionPointer << ">>";
+
+
+    tf::trace::variableDependencyGraph = 0;
+    tf::trace::vcd = 0;
+
+    for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+    {
+        tf::TraceableFieldBase * ptr = *iter;
+        if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+        {
+            ptr->vcd = 0;
+        }
+    }
+
+}
+
+bool detectGD(std::map<std::string,tf::TraceableFieldBase*> & tfmap){
+	for (int i = 0;i<32;i++){
+		std::stringstream ssa;
+		ssa << "vcore::vcore.v.u_core.or1200_cpu.or1200_rf.rf_a::mem" << i;
+		std::stringstream ssb;
+		ssb << "vcore::vcore.v.u_core.or1200_cpu.or1200_rf.rf_a::mem" << i;
+		tf::TraceableFieldBase* a = tfmap[ssa.str()];
+		tf::TraceableFieldBase* b = tfmap[ssb.str()];
+		if (a->getValues().second != b->getValues().second){
+			return true;
+		}
+	}
+	return false;
+}
+
+int32_t OR1KVCPU::execute()
+{
+
+	if (plugin_cpu_->cpuTime_ps == 0){
+		if (instrBus == 0)
+        	instrBus = new etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,true,true,4,uint32_t>(*instrBusSig,*plugin_system_,*plugin_cpu_);
+
+		if (dataBus == 0)
+		    dataBus = new etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,false,true,4,uint32_t>(*dataBusSig,*plugin_system_,*plugin_cpu_);
+		//reset for 2 cycles
+		cpu_reset_ = true;
+		cycle();
+		cycle();
+		cpu_reset_ = false;
+		deboot();
+	}
+
+    //etissCoreState->instructionAccurateCallback(plugin_cpu_->cpuTime_ps);
+
+
+    if (!run_model_){
+        return 0;
+    }
+
+    if (instrBus == 0)
+        instrBus = new etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,true,true,4,uint32_t>(*instrBusSig,*plugin_system_,*plugin_cpu_);
+
+    if (dataBus == 0)
+        dataBus = new etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,false,true,4,uint32_t>(*dataBusSig,*plugin_system_,*plugin_cpu_);
+
+
+    if (plugin_cpu_->cpuTime_ps != 0){
+        std::cout << "<<BOOTING CPU MODEL>>";
+        std::flush(std::cout);
+        normal_execution_ = false;
+        boot();
+        normal_execution_ = true;
+
+        std::cout << "<<CPU MODEL BOOTED>>";
+        std::flush(std::cout);
+    } else {
+    	//reset for 2 cycles
+    	normal_execution_ = false;
+		cpu_reset_ = true;
+		cycle();
+		cycle();
+		cpu_reset_ = false;
+		normal_execution_ = true;
+        std::cout << "<<USING RTL MODEL>>";
+        std::flush(std::cout);
+    }
+
+    bool _NOP_EXIT = false;
+    {
+        etiss::interfaces::VCD vcd("run.vcd");
+
+        for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+        {
+            tf::TraceableFieldBase * ptr = *iter;
+            if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+            {
+                vcd.declare(*ptr,ptr->getFullName(),ptr->width_,0,false);
+                ptr->vcd = 0;//&vcd;
+            }
+        }
+
+        // special snooping function to prevent switch backs for delay slot instructions
+        bool delay_slot = false;
+        {
+            instrBus->snoopRead = [&delay_slot,this,&_NOP_EXIT](bool /*should never be true*/,const uint64_t & ,uint64_t ,const uint8_t * buf,unsigned /*should alwys be 4*/)
+            {
+                switch (buf[0]>>2)  //
+                {
+                case 0x00: //l.j
+                case 0x01: //l.jal
+                case 0x03: //l.bnf
+                case 0x04: //l.bf
+                case 0x11: //l.jr
+                case 0x12: //l.jalr
+                    delay_slot = true;
+                    break;
+                default:
+                    delay_slot = false;
+                    break;
+                }
+                if (buf[0] == 0x15){
+            		if ((buf[2] == 0) && (buf[3] == 1)){
+            			_NOP_EXIT = true;
+            		}
+            	}
+                icount_++;
+
+            };
+        }
+
+		std::map<std::string,tf::TraceableFieldBase*> tfmap;
+
+		for (auto f : fields_){
+			tfmap[f->getName()] = f;
+		}
+
+        //unsigned swapbackcond = 0;
+        bool rtl_fsb = etiss::cfg().get<bool>("rtl_fsb",false);
+        bool rtl_gd = etiss::cfg().get<bool>("rtl_gd",false);
+		uint64_t ccount = 0;
+        while (!Verilated::gotFinish() && (((run_model_||rtl_fsb)&&!_NOP_EXIT)  || delay_slot || (rtl_gd && detectGD(tfmap))))  // TODO check error existence
+        {
+            if ((!(run_model_)) && delay_slot)
+                std::cout << "delay slot deboot prevented" << std::endl;
+            if (false){ // this and the followind if false block can be used to abort a simulation as soon as it is clear that a fault was not masked within the RTL model.
+            if (rtl_fsb && etiss::interfaces::rtl_injected_fault){
+            	if (!etiss::interfaces::rtl_poluted){ // if the fault left over the bus we cannot determine a masked fault
+            		bool ok = true;
+            		for (auto f : fields_){ // finds fields with different error/error free values
+            			auto p = f->getValues();
+            			if (p.first != p.second){
+            				ok = false;
+            				break;
+            			}
+            		}
+            		if (ok){ 
+							ofstream out;
+							std::string file = etiss::cfg().get<std::string>("resultpath","") + "fault_masked" + etiss::cfg().get<std::string>("iteration","");
+							out.open(file.c_str());
+							out << "1";
+							out.flush();
+							out.close();
+							exit(0);
+							if (!delay_slot)
+								break;
+            		}
+            	}
+            }  
+            } 
+             
+            cycle(); // simulate RTL cycle
+            ccount++;
+        }
+        if (false){ // write out that a fault has not been masked
+        					ofstream out;
+							std::string file = etiss::cfg().get<std::string>("resultpath","") + "fault_masked" + etiss::cfg().get<std::string>("iteration","");
+							out.open(file.c_str());
+							out << "0";
+							out.flush();
+							out.close();
+							//exit(0);
+								}
+		{
+		ofstream out;
+		std::string file = etiss::cfg().get<std::string>("resultpath","") + "cycles" + etiss::cfg().get<std::string>("iteration","");
+		out.open(file.c_str());
+		out << ccount;
+		out.flush();
+		out.close();
+		}
+        for (auto iter = tf::TraceableFieldBase::instances_.begin(); iter != tf::TraceableFieldBase::instances_.end(); ++iter)
+        {
+            tf::TraceableFieldBase * ptr = *iter;
+            if (ptr->getName()[0])  // only signals and registers have names. ignore the rest
+            {
+                ptr->vcd = 0;
+            }
+        }
+
+        instrBus->snoopRead = 0; // remove snoopRead (otherwise there would be a seg fault
+
+    }
+
+    std::cout << "<<DEBOOTING CPU MODEL>>";
+    std::flush(std::cout);
+    normal_execution_ = false;
+    deboot();
+    normal_execution_ = true;
+    std::cout << "<<CPU MODEL DEBOOTED>>";
+    std::flush(std::cout);
+
+    delete instrBus;
+    instrBus = 0;
+    delete dataBus;
+    dataBus = 0;
+
+    std::cout << "icount: " << icount_ << std::endl;
+
+    return _NOP_EXIT?etiss::RETURNCODE::CPUFINISHED:0;
+
+}
+
+bool OR1KVCPU::interruptWrite(unsigned bit,bool value)
+{
+
+    if (value)
+        vcore->irq = vcore->irq | (1<<bit);
+    else
+        vcore->irq = vcore->irq & ~(1<<bit);
+
+    return true; // prevent interrupt from reaching the etiss cpu
+}
+
+
+
+
+} // verilator
+
+} // etiss
+

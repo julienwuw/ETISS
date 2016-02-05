@@ -1,0 +1,213 @@
+/**
+
+@copyright
+<pre>
+
+
+	Copyright (c) 2014 Institute for Electronic Design Automation, TU Munich
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+
+
+</pre>
+@author Marc Greim <marc.greim@mytum.de>
+
+@date July 29, 2014
+
+@version 0.1
+
+*/
+/**
+	@file
+
+	@brief
+
+	@detail
+
+
+
+
+*/
+
+
+#include <map>
+#include <iostream>
+#include <memory>
+
+#include "etiss/ETISS.h"
+#include "etiss/DebugSystem.h"
+
+
+#include <cstring>
+
+#include <sstream>
+
+using namespace etiss;
+
+
+#include "etiss/Instruction.h"
+
+#include <ctime>
+
+
+int main( int argc, const char* argv[] ) {
+{
+
+	etiss::Initializer initializer(argc,argv,"-fno-sigint-console");
+
+	// create memory device
+	DebugSystem dsys;
+	// load image to memory
+	dsys.load(0,"../SW/test3/code.bin");
+
+	// can be used to write a small assembler programm beginning at address 0
+	if (true){
+		std::list<etiss::uint32> instructions;
+		//OR1K
+		{
+		    instructions.push_back(0xb0f36080); // this is for the ISB instruction
+		    instructions.push_back(0x82468746);//little endioan this is to test the MOV instruction
+		    instructions.push_back(0x82438743); // this is for the ORRS instruction
+			instructions.push_back(0x85449544);//ADD SP plus reg, T2 Rm=0,2
+			instructions.push_back(0x68446944);//ADD SP plus reg, T1 Rdm=0,1
+			instructions.push_back(0x13b07fb0);//ADD SP plus imm, T2 imm=0x13,ff
+			instructions.push_back(0x13a8ffa8);//ADD SP plus imm, T1 imm=0x13,ff
+			instructions.push_back(0xb61ddb1c);//ADD imm, T1 imm3=6,3 Rn=6,3 Rd=6,3
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0x03FFFFCE);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210801);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0x00000002);
+			instructions.push_back(0xE0200803);
+			instructions.push_back(0x03FFFFF6);
+			instructions.push_back(0xE0200803);
+		}
+
+		unsigned pos = 0;
+		for (std::list<etiss::uint32>::iterator iter = instructions.begin();iter != instructions.end();iter++){
+			etiss::uint8 buf[4];
+			buf[0] = *iter>>24;
+			buf[1] = *iter>>16;
+			buf[2] = *iter>>8;
+			buf[3] = *iter;
+			dsys.dbg_write(pos,buf,4);
+			pos += 4;
+		}
+	}
+
+
+	std::map<std::string,std::string> options;
+
+	options.clear();
+	std::shared_ptr<etiss::CPUCore> cpu = etiss::CPUCore::create("ARMv6M","core0",options);
+
+	if (!cpu){
+		etiss::log(etiss::ERROR,"failed to create cpu core");
+		return -1;
+	}
+
+	cpu->setTimer(false);
+
+	VirtualStruct::root()->mountStruct("core0",cpu->getStruct());
+
+	cpu->set(getJIT("GCCJIT"));
+
+	etiss::uint64 sa = 0;
+	//cpu->reset(&sa); // optional reset with start address
+
+
+	options.clear();
+	//cpu->addPlugin(etiss::getPlugin("PrintInstruction",options));	// a plugin that prints the instruction and its address when it is executed
+
+	options.clear();
+	options["port"] = "2222"; // define port (default: 2222)
+	//cpu->addPlugin(etiss::getPlugin("gdbserver",options)); // adds a gdb debug server (connect with "target remote localhost:2222")
+
+	options.clear();
+	options["logaddr"] = "0x80000000";
+	options["logmask"] = "0xF0000000";
+	cpu->addPlugin(etiss::getPlugin("Logger",options)); // simple logger write to logaddr to print a character.
+
+
+    etiss_int32 exception = cpu->execute(dsys);
+
+	std::cout << "CPU exited with exception: 0x" <<std::hex << exception << std::dec << ": " << etiss::RETURNCODE::getErrorMessages()[exception] << std::endl;
+
+	cpu.reset(); // delete cpu
+}
+
+	//quick_exit( 0 );
+
+}
+
+

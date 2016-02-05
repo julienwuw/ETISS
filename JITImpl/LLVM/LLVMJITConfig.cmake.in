@@ -1,0 +1,5 @@
+
+set(ETISS_LIBRARIES ${ETISS_LIBRARIES} pthread)
+
+
+

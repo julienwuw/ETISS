@@ -1,0 +1,21 @@
+
+#include "OperationTracing.h"
+
+namespace tf{
+namespace trace{
+
+etiss::interfaces::dot::ValueOperationTraceGraph * valueOperationTraceGraph = 0;
+etiss::interfaces::dot::ValueOperationTraceGraphStreamer * valueOperationTraceGraphStreamer = 0;
+etiss::interfaces::dot::VariableDependencyGraph * variableDependencyGraph = 0;
+etiss::interfaces::VCD * vcd = 0;
+
+}
+}
+
+namespace etiss {
+
+template<> std::string toString<tf::trace::Operation>(const tf::trace::Operation & op){
+    return tf::trace::toString(op);
+}
+
+}

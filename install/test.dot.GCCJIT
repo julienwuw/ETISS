@@ -1,0 +1,8 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node10" [ label="GCCJIT" shape="polygon"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node10" -> "node0" // GCCJIT -> ETISS
+}

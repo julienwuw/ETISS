@@ -1,0 +1,37 @@
+#ifndef MODULENAMEEXTENSION_H_INCLUDED
+#define MODULENAMEEXTENSION_H_INCLUDED
+
+#include <string>
+
+/// if not true then the stack size will be at most 1 (the current name)
+#define MODULENAMEEXTENSION_ENABLESTACK 1
+
+
+namespace tf {
+
+	/**
+		push a module name onto the module hierarchy name stack
+	*/
+	void pushModuleName(const std::string & name);
+	/**
+		pop a module name from the module hierarchy name stack
+	*/
+	void popModuleName(const std::string & name);
+
+	/**
+		sets the seperator string for module names
+	*/
+	void setModuleNameSeperator(const std::string & sep);
+
+	/**
+		returns the module names + the field name
+		pointer remains valid during execution
+	*/
+	const char * getFullCurrentModuleName();
+
+	extern bool moduleNamePresent;
+
+
+}
+
+#endif // MODULENAMEEXTENSION_H_INCLUDED

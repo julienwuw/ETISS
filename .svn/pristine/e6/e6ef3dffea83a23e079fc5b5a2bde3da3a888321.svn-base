@@ -1,0 +1,59 @@
+
+BUILD_DIR?=.
+
+
+DEBUG?=1
+
+ifeq ($(DEBUG),0)
+	DBGPARAM= 
+	OPTLEVEL?= -O2 
+else
+	DBGPARAM= -g 
+	OPTLEVEL?= 
+endif
+
+
+
+# Change path as needed
+ETISS_FOLDER=../../
+
+
+
+CFLAGS=-std=c++0x -c -MMD -Wall -Werror -fPIC $(OPTLEVEL) $(DBGPARAM) $(INCLUDE_ARGS) -DDEBUG=$(DEBUG) -Iinclude -I$(ETISS_FOLDER)/include -I$(ETISS_FOLDER)/include_c -I$(BUILD_DIR)
+
+all: $(BUILD_DIR)/libQEMU.so
+
+include tlmu.mk
+
+
+$(BUILD_DIR)/qemucpu.o: src/qemucpu.cpp
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+
+$(BUILD_DIR)/IncludedFiles.cpp: $(TLMU_REALPATH)/tlmu/compiled
+	mkdir -p $(TLMU_REALPATH)/build/tlmu
+	cp -r $(TLMU_REALPATH)/tlmu/compiled/* $(TLMU_REALPATH)/build/tlmu
+	python $(ETISS_FOLDER)/includeHeaderCodegen.py -s $(TLMU_REALPATH)/build $(TLMU_REALPATH)/build/tlmu/ -mkd $(BUILD_DIR)/IncludedFiles.cpp.d $(BUILD_DIR)/IncludedFiles.cpp -l count -n names -d data -ch $(BUILD_DIR)/IncludedFiles.h IncludedFiles.h $(BUILD_DIR)/IncludedFiles.cpp
+	
+$(BUILD_DIR)/IncludedFiles.o: $(BUILD_DIR)/IncludedFiles.cpp
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+
+$(BUILD_DIR)/libQEMU.o: $(TLMU_REALPATH)/tlmu/compiled libQEMU.cpp
+	gcc $(CFLAGS) -o $@ libQEMU.cpp
+
+	
+-include *.d
+-include build/*.d
+-include build/*/*.d
+
+	
+$(BUILD_DIR)/libQEMU.so : $(BUILD_DIR)/IncludedFiles.o $(BUILD_DIR)/libQEMU.o $(BUILD_DIR)/qemucpu.o $(BUILD_DIR)/IncludedFiles.o
+	gcc -std=c++0x -shared -g -o $(BUILD_DIR)/libQEMU.so $(BUILD_DIR)/libQEMU.o $(BUILD_DIR)/qemucpu.o $(BUILD_DIR)/IncludedFiles.o   $(INCLUDE_ARGS)  $(TLMU_REALPATH)/tlmu/compiled/lib/libtlmu.a -Wl,--version-script=QEMUABI.cfg  -lrt
+
+clean:
+	rm -f *.so
+	rm -f *.o
+	rm -f *.d
+	rm -f -R build
+	rm -f -R tlmu/build
+	rm -f -R tlmu/compiled
+

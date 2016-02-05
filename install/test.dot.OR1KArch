@@ -1,0 +1,8 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node5" [ label="OR1KArch" shape="polygon"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node5" -> "node0" // OR1KArch -> ETISS
+}

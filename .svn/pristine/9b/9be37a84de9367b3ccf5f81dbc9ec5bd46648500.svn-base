@@ -1,0 +1,68 @@
+#define ETISS_LIBNAME or1ksim
+#define ETISS_EXPORT
+#include "etiss/helper/PluginLibrary.h"
+#include "etiss/Misc.h"
+
+#include "IncludedFiles.h"
+#include "or1ksimcpu.h"
+
+
+
+
+// PLACE INCLUDES HERE
+
+static or1ksimcpu * createor1ksimcpu(std::map<std::string,std::string> options){
+
+    or1ksimcpu * ret = new or1ksimcpu();
+
+    if (!ret->valid()){
+        delete ret;
+        return 0;
+    }
+
+    return ret;
+
+}
+
+extern "C" {
+	ETISS_LIBRARYIF_VERSION_FUNC_IMPL
+	unsigned or1ksim_countPlugin(){
+		return 1;
+	}
+	const char * or1ksim_namePlugin(unsigned index){
+		switch (index){
+		case 0:
+			return "or1ksimcpu";
+		default:
+			return "";
+		}
+	}
+	etiss::Plugin * or1ksim_createPlugin(unsigned index,std::map<std::string,std::string> options){
+		etiss::Configuration config; config.config() = options; // load the options into a config object for easy access
+		switch (index){
+		case 0:
+            return createor1ksimcpu(options);
+		default:
+			return 0;
+		}
+	}
+	void or1ksim_deletePlugin(etiss::Plugin * ptr){
+		delete ptr;
+	}
+
+
+	unsigned or1ksim_getFileCount(){
+		return count;
+	}
+	const char * or1ksim_getFileName(unsigned index){
+		return names[index];
+	}
+	const char * or1ksim_getFileData(unsigned index){
+		return data[index];
+	}
+	int or1ksim_getFileSize(int index){
+		return data_size[index];
+	}
+
+
+} // extern C

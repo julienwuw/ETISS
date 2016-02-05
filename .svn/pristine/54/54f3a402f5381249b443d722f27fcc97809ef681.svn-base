@@ -1,0 +1,61 @@
+#include "etiss/Plugin.h"
+#include "etiss/CPUCore.h"
+#include "etiss/interfaces/Wishbone.h"
+#include "etiss/interfaces/VCD.h"
+
+#include "VCPUStruct.h"
+#include "etiss/IntegratedLibrary/VirtualStructMemory.h"
+
+#include "etiss/Benchmark.h"
+
+#include <iomanip>
+
+namespace etiss
+{
+
+
+
+namespace verilator
+{
+
+/**
+	this class can run an OR1k RTL implementation within the etiss::CoroutinePlugin::execute() function.
+	When added to a CPUCore the fidls of the RTL model can be addressed via the etiss::fault::Injector/etiss::VirtualStruct interfaces under the path "<CPUCore_name>::OR1KVCPU" (e.g. core0::OR1KVCPU::some_register)
+*/
+class OR1KVCPU : public etiss::CoroutinePlugin, public etiss::InterruptListenerPlugin
+{
+public:
+    OR1KVCPU();
+    virtual ~OR1KVCPU();
+    virtual int32_t execute();
+    etiss::Benchmark<> bench;
+protected:
+    inline std::string _getPluginName() const
+    {
+        return "OR1KVCPU";
+    }
+    virtual void addedToCPUCore(etiss::CPUCore * core);
+    virtual void removedFromCPUCore(etiss::CPUCore * core);
+private:
+    void cycle();
+    void boot(); ///< copy state from the ISS
+    void deboot(); ///< copy state to the ISS
+    Vor1200mp_nofeatures * vcore; ///<RTL model
+    std::shared_ptr<etiss::VirtualStruct> vcoreState; ///< VirtualStruct of the RTL model
+    std::shared_ptr<etiss::VirtualStruct> etissCoreState; ///< VirtualStruct of the CPUCore (CPUCore::getStruct())
+    etiss::interfaces::WishboneSignalMap<TraceableField<uint8_t>,TraceableField<uint32_t> > * dataBusSig; ///< wishbone bus signals for transactor (data bus)
+    etiss::interfaces::WishboneSignalMap<TraceableField<uint8_t>,TraceableField<uint32_t> > * instrBusSig; ///< wishbone bus signals for transactor (instruction bus)
+    etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,false,true,4,uint32_t> * dataBus; ///< wishbone bus transactor (data bus)
+    etiss::interfaces::WishboneBus<TraceableField<uint8_t>,TraceableField<uint32_t>,true,true,4,uint32_t> * instrBus; ///< wishbone bus transactor (instruction bus)
+    virtual bool interruptWrite(unsigned bit,bool value); ///< implements InterruptListenerPlugin. allows to redirect interrupts
+    bool cpu_reset_; ///< reset signal
+    bool run_model_; ///< if true then the RTL model shall be executed
+    bool normal_execution_; ///< true if RTL is not executing instructions for copying the state
+    uint64_t last_ex_pc_; ///< helper variable to detect a new program counter value of the RTL model
+    uint64_t icount_; ///< count read instructions
+    std::set<tf::TraceableFieldBase*> fields_; ///< set of pointers to all fields of the RTL model
+};
+
+} // verilator
+
+} // etiss

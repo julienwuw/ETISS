@@ -1,0 +1,206 @@
+#include "qemucpu.h"
+#include <mutex>
+#include <iostream>
+
+#include "etiss/CPUCore.h"
+
+
+/// no dmi interface
+void etiss_get_dmi_ptr(void *o, uint64_t addr, struct tlmu_dmi *dmi)
+{
+
+    /*
+    if ( <<dmi exists>> ) {
+    	dmi->ptr = (void *) &ram[0];
+    	dmi->base = 0x19000000;
+    	dmi->size = 128 * 1024;
+    	dmi->prot = TLMU_DMI_PROT_READ | TLMU_DMI_PROT_WRITE;
+    }
+    */
+}
+
+/// mapps to ETISS_System read/write
+int etiss_bus_access(void *o, int64_t clk, int rw, uint64_t addr, void *data, int len)
+{
+
+    qemucpu * qcpu = (qemucpu*)o;
+
+    //std::cout << "bus access: " << ((bool)rw) << " addr: 0x" << std::hex << addr << " len: " << len << std::endl;
+
+    if (rw)  // write
+    {
+        uint32_t code = etiss::RETURNCODE::DBUS_READ_ERROR;
+        if (len == 4){
+            unsigned char buf[4];
+            buf[0] = ((unsigned char*)data)[3];
+            buf[1] = ((unsigned char*)data)[2];
+            buf[2] = ((unsigned char*)data)[1];
+            buf[3] = ((unsigned char*)data)[0];
+            code = qcpu->plugin_system_->dwrite(qcpu->plugin_system_,qcpu->plugin_cpu_,addr,buf,4);
+        } else if (len == 2){
+            unsigned char buf[2];
+            buf[0] = ((unsigned char*)data)[1];
+            buf[1] = ((unsigned char*)data)[0];
+            code = qcpu->plugin_system_->dwrite(qcpu->plugin_system_,qcpu->plugin_cpu_,(addr&~3)+(3-(addr&3)),buf,2);
+        } else if (len == 1){
+            code = qcpu->plugin_system_->dwrite(qcpu->plugin_system_,qcpu->plugin_cpu_,(addr&~3)+(3-(addr&3)),((unsigned char*)data),len);
+        }
+        if (code){
+            ///TODO signal bus error to QEMU
+            etiss::log(etiss::FATALERROR,"cannot handle this bus access of qemu",addr,len);
+        }
+    }
+    else     // read
+    {
+        uint32_t code = etiss::RETURNCODE::DBUS_READ_ERROR;
+        if (len == 4){
+            code = qcpu->plugin_system_->dread(qcpu->plugin_system_,qcpu->plugin_cpu_,addr,((unsigned char*)data),len);
+            for (int i = 0;i<(2);++i){
+                unsigned char tmp = ((unsigned char*)data)[i];
+                ((unsigned char*)data)[i] = ((unsigned char*)data)[len-1-i];
+                ((unsigned char*)data)[len-1-i] = tmp;
+            }
+        } else if (len == 2){
+            code = qcpu->plugin_system_->dwrite(qcpu->plugin_system_,qcpu->plugin_cpu_,(addr&~3)+(3-(addr&3)),((unsigned char*)data),2);
+            unsigned char tmp = ((unsigned char*)data)[0];
+            ((unsigned char*)data)[0] = ((unsigned char*)data)[1];
+            ((unsigned char*)data)[1] = tmp;
+        } else if (len == 1){
+            //std::cout << "bus access: " << ((bool)rw) << " addr: 0x" << std::hex << addr << " len: " << len << std::endl;
+            code = qcpu->plugin_system_->dread(qcpu->plugin_system_,qcpu->plugin_cpu_,(addr&~3)+(3-(addr&3)),((unsigned char*)data),len);
+        }
+        if (code){
+            ///TODO signal bus error to QEMU
+            etiss::log(etiss::FATALERROR,"cannot handle this bus access of qemu",addr,len);
+        }
+
+    }
+
+    return 0; // always return 0 since dmi is not possible. if dmi is supported then 1 must be returned
+}
+
+void etiss_bus_access_dbg(void *o, int64_t clk, int rw, uint64_t addr, void *data, int len)
+{
+
+    qemucpu * qcpu = (qemucpu*)o;
+
+    //std::cout << "dbg bus access: " << ((bool)rw) << " addr: 0x" << std::hex << addr << std::endl;
+
+    if (rw)  // write
+    {
+        if (qcpu->plugin_system_->dwrite(qcpu->plugin_system_,qcpu->plugin_cpu_,addr,(unsigned char*)data,len))
+        {
+            //tlmu_notify_event(&qcpu->tlmu, enum tlmu_event ev, void *d);
+            ///TODO notify qemu about read failure
+        }
+    }
+    else     // read
+    {
+        if (qcpu->plugin_system_->dread(qcpu->plugin_system_,qcpu->plugin_cpu_,addr,(unsigned char*)data,len))
+        {
+            //tlmu_notify_event(&qcpu->tlmu, enum tlmu_event ev, void *d);
+            ///TODO notify qemu about read failure
+        }
+    }
+
+}
+
+void etiss_sync(void *o, int64_t time_ns)
+{
+
+}
+
+
+qemucpu::qemucpu()
+{
+
+    valid_ = true;
+
+
+}
+qemucpu::~qemucpu()
+{
+
+}
+int32_t qemucpu::execute()
+{
+    if (!valid_)
+        return etiss::RETURNCODE::GENERALERROR;
+    tlmu_run(&tlmu);
+    return etiss::RETURNCODE::CPUFINISHED;
+}
+bool qemucpu::valid()
+{
+    return valid_;
+}
+void qemucpu::init(ETISS_CPU * cpu,ETISS_System * system,etiss::CPUArch * arch)
+{
+
+}
+void qemucpu::cleanup()
+{
+
+}
+void qemucpu::addedToCPUCore(etiss::CPUCore * core)
+{
+    tlmu_init(&tlmu,core->getName().c_str());
+    std::string sofile = etiss::cfg().get<std::string>("etiss_wd","./")+"/tlmu/lib/libtlmu-or32.so";
+    valid_ = !tlmu_load( &tlmu , sofile.c_str() );
+
+    tlmu_append_arg(&tlmu, "-M");
+    tlmu_append_arg(&tlmu, "tlm-mach");
+
+    tlmu_append_arg(&tlmu, "-icount");
+    tlmu_append_arg(&tlmu, "1");
+
+    tlmu_append_arg(&tlmu, "-d");
+    tlmu_append_arg(&tlmu, "exec");
+
+    tlmu_append_arg(&tlmu, "-cpu");
+    tlmu_append_arg(&tlmu, "or1200-or32-cpu");
+
+    //tlmu_append_arg(&tlmu,"-nographic");
+
+    tlmu_set_log_filename(&tlmu, "QEMUtrace.txt");
+
+    tlmu_set_bus_access_cb(&tlmu, etiss_bus_access);
+    tlmu_set_bus_access_dbg_cb(&tlmu, etiss_bus_access_dbg);
+    tlmu_set_bus_get_dmi_ptr_cb(&tlmu, etiss_get_dmi_ptr);
+    tlmu_set_sync_cb(&tlmu, etiss_sync);
+
+    tlmu_set_opaque(&tlmu, this);
+
+    tlmu_set_sync_period_ns(&tlmu, 10000000ULL);
+
+	tlmu_set_boot_state(&tlmu, TLMU_BOOT_RUNNING);
+
+	// all accesses should be passed to ETISS. ATTENTION: currently bus exceptions are ignored!
+    tlmu_map_ram(&tlmu, "mem", 0x0ULL, 0x00000000FFFFFFFFULL, 1);
+
+}
+void qemucpu::removedFromCPUCore(etiss::CPUCore * core)
+{
+    tlmu_set_opaque(&tlmu, 0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,22 @@
+{
+global: 
+	QEMU_countCPUArch;
+	QEMU_nameCPUArch;
+	QEMU_createCPUArch;
+	QEMU_deleteCPUArch;
+	QEMU_countJIT;
+	QEMU_nameJIT;
+	QEMU_createJIT;
+	QEMU_deleteJIT;
+	QEMU_countPlugin;
+	QEMU_namePlugin;
+	QEMU_createPlugin;
+	QEMU_deletePlugin;
+	QEMU_etissversion;
+	QEMU_getFileCount;
+	QEMU_getFileName;
+	QEMU_getFileData;
+	QEMU_getFileSize;
+local: *;
+};
+

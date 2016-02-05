@@ -1,0 +1,179 @@
+#ifndef UDEFMATH_H_INCLUDED
+#define UDEFMATH_H_INCLUDED
+
+#include "TraceableFieldDef.h"
+
+namespace tf {
+
+namespace udef{
+
+
+template <typename T>
+/**
+	returns true if the bool value of val is not affected by undefined bits
+*/
+bool boolEqual(const T & val,const T & udef_mask)
+{
+    return ((bool)(val&~udef_mask)) == ((bool)(val|udef_mask));
+}
+
+template <typename T>
+/**
+	returns true if val is true no matter the undefined bits
+*/
+bool boolTrue(const T & val,const T & udef_mask)
+{
+    return ((bool)(val&~udef_mask));
+}
+
+template <typename T>
+/**
+	returns true if val is false no matter the undefined bits
+*/
+bool boolFalse(const T & val,const T & udef_mask)
+{
+    return !((bool)(val|udef_mask));
+}
+
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for an addition
+*/
+auto calcUdef_add(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2) -> decltype(T1()+T2()){
+
+	typedef decltype(T1()+T2()) R;
+
+	R ret = 0;
+
+	for (size_t i = 0;i<(sizeof(R)*8);i++){
+		R mask = ((R)1)<<i;
+		if (((R)udef1|(R)udef2)&(mask)){
+			do {
+				ret = ret | mask;
+				if (!(((R)udef1|(R)udef2)&(mask))){ // no udef bit set
+					if ((((R)val1|(R)val2)&mask) == 0){ // this bit is null and therefor catches any previous udefined changes
+						break;
+					}
+				}
+				i++;
+				mask = ((R)1)<<i;
+			} while (i < (sizeof(R)*8));
+		}
+	}
+
+	return ret;
+
+}
+
+template <typename T1>
+/**
+	calculate a resulting undefined bit mask for an bitwise inversion (~)
+*/
+T1 calcUdef_inv(const T1 & val1,const T1 & udef1) {
+
+	return udef1; // inversion doesn't change undefined mask
+
+}
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a substraction
+*/
+auto calcUdef_sub(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2) -> decltype(T1()-T2()){
+
+	typedef decltype(T1()+T2()) R;
+
+	auto val2_ = -val2;// = (~val2)+1;
+	decltype(val2_) udef2_ = calcUdef_add((decltype(val2_))~val2,calcUdef_inv((decltype(val2_))val2,(decltype(val2_))udef2),(T2)1,(T2)0); // calculate new udef mask
+
+	return calcUdef_add(val1,udef1,val2_,udef2_);
+
+}
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a bitwise and
+*/
+auto calcUdef_and(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2) -> decltype(T1()&T2()){
+
+	return ((val1|udef1)&(val2|udef2))&(udef1|udef2);
+
+}
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a bitwise or
+*/
+auto calcUdef_or(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2) -> decltype(T1()|T2()){
+
+	return (~((val1&~udef1)|(val2&~udef2)))&(udef1|udef2); // if a bit is defined and set then the undefined bit/value of the other value is irrelevant
+
+}
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a logical and (-> return true if undefined)
+*/
+bool calcUdef_l_and(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2) {
+
+	if (boolEqual(val1,udef1) && boolEqual(val2,udef2)) // undefined bits are not present or have no effect
+		return false;
+
+	return !( boolFalse(val1,udef1) || boolFalse(val2,udef2) ); // defined if one is defnied as false
+
+}
+
+template <typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a logical or
+*/
+bool calcUdef_l_or(const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2){
+
+	if (boolEqual(val1,udef1) && boolEqual(val2,udef2)) // undefined bits are not present or have no effect
+		return false;
+
+	return !( boolTrue(val1,udef1) || boolTrue(val2,udef2) ); // defined if one is defnied as true
+
+}
+
+template <typename C,typename T1,typename T2>
+/**
+	calculate a resulting undefined bit mask for a logical or
+*/
+bool calcUdef_ternary(const C & cond,const C & udefcond,const T1 & val1,const T1 & udef1,const T2 & val2,const T2 & udef2){
+
+	if (boolEqual(cond,udefcond)){ // undefined bits are not present or have no effect
+		return cond?udef1:udef2; // passthrough
+	} else {
+		return (udef1|udef2) | (val1^val2); // some bits might still be defined if input values are partially defined and equal
+	}
+
+}
+
+template <typename R,typename C,typename T1>
+/**
+	calculate a resulting undefined bit mask for a logical or
+*/
+void calcUdef_assignif(R & dst,R & udefdst,const C & cond,const C & udefcond,const T1 & val1,const T1 & udef1){
+
+	if (boolEqual(cond,udefcond)){ // undefined bits are not present or have no effect
+		if (boolTrue(cond,udefcond))
+			udefdst = udef1;
+		// else leave indefined as it is
+	} else {
+		udefdst = (udef1|udefdst) | (val1^dst); // some bits might still be defined if input values are partially defined and equal
+	}
+
+}
+
+
+
+
+}
+
+
+}
+
+
+#endif // UDEFMATH_H_INCLUDED

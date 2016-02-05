@@ -1,0 +1,49 @@
+//#include <stdio.h>
+
+unsigned int isqrt2(int x) {
+
+    unsigned int bit,rest,root;
+    if (x<0) return 0;
+
+    bit = (unsigned int) 0x40000000;
+    rest = (unsigned int) x; 
+    root = 0;
+
+    while (bit > 0)
+    {
+	if (rest >= (bit | root)) 
+        {
+	    rest = rest - (bit | root);
+            root = root >>1;
+            root = root | bit; 
+        }
+        else
+        {
+	    root = root >> 1;
+        }
+        bit = bit >> 2;
+    }
+    return root;
+} 
+
+
+int main() 
+{
+  int i = isqrt2(0);
+  /*  printf("sq(-1)=%d\n", isqrt2(-1));
+    printf("sq(1)=%d\n", isqrt2(1));
+    printf("sq(4)=%d\n", isqrt2(4));
+    printf("sq(10)=%d\n", isqrt2(10));
+    printf("sq(16)=%d\n", isqrt2(16));
+    printf("sq(25)=%d\n", isqrt2(25));
+    printf("sq(36)=%d\n", isqrt2(36));
+    printf("sq(49)=%d\n", isqrt2(49));
+    printf("sq(64)=%d\n", isqrt2(64));
+*/
+
+int* logger = 0x80000000;
+*logger = i;
+	    
+return i;
+}
+

@@ -1,0 +1,8 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node6" [ label="ARMv6M" shape="polygon"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node6" -> "node0" // ARMv6M -> ETISS
+}

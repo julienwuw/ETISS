@@ -1,0 +1,14 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node4" [ label="main" shape="house"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node4" -> "node0" // main -> ETISS
+    "node12" [ label="-lpthread" shape="ellipse"];
+    "node4" -> "node12" // main -> -lpthread
+    "node13" [ label="pthread" shape="ellipse"];
+    "node4" -> "node13" // main -> pthread
+    "node14" [ label="dl" shape="ellipse"];
+    "node4" -> "node14" // main -> dl
+}

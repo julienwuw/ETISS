@@ -1,0 +1,933 @@
+#ifndef TRACEABLEFIED_H_
+#define TRACEABLEFIED_H_
+
+#include "TraceableFieldDef.h"
+
+#include "OperationTracing.h" // comment out to disable
+
+#include "TraceableFieldBase.h"
+
+#include <string>
+#include <iostream>
+
+#define TF_NO_CTOR_TRACE 1
+#define TF_NO_DTOR_TRACE 1
+
+extern double sc_time_stamp(); // moved here from verilated.h
+
+
+#define TraceableField_APPEND_(X,Y) X ## Y
+#define TraceableField_APPEND(X,Y) TraceableField_APPEND_(X,Y)
+#define TraceableField_TOSTRING_(X) #X
+#define TraceableField_TOSTRING(X) TraceableField_TOSTRING_(X)
+#define TraceableField_register_helper(SNAME,CLASS,FLAGS) class CLASS { public: CLASS(){ tf::TraceableFieldBase::applyName(SNAME,FLAGS);  } } TraceableField_APPEND(TMPVARIABLE_,__COUNTER__);
+/// put his define after the field declaration in a class to apply the name to a traceable field @see tf::TraceabelFieldBase::applyName()
+#define TraceableField_register(NAME,FLAGS) TraceableField_register_helper(TraceableField_TOSTRING(NAME),TraceableField_APPEND(TMPCLASS_,__COUNTER__),FLAGS)
+/// put his define after the field array declaration in a class to apply the name to a traceable field @see tf::TraceabelFieldBase::applyName()
+#define TraceableField_register_array(NAME,SIZE,FLAGS) TraceableField_register_helper(TraceableField_TOSTRING(NAME) "[" TraceableField_TOSTRING(SIZE) "]",TraceableField_APPEND(TMPCLASS_,__COUNTER__),FLAGS)
+#define TraceableFieldBase_widestINT unsigned long long
+#define TRACEABLEFIELD_TreatPotentialErrorInfoLossAsError 1	// if enabled then a message will be printed whenever there is the possibility that error inforamtion is lost and tracing failes
+
+
+
+namespace tf
+{
+/**
+    stores error information
+    @todo implement
+*/
+class ErrorInformation
+{
+public:
+
+};
+
+
+}
+
+
+
+/// fixes type missmatch error for gcc 4.6 but limits possible types and may provoke future errors. gcc bug? clang 3.4 handles e.g. decltype(bool()?int():unsinged()) with sfinae
+#define tf_tdeclytype(T,E) decltype(T()|E())
+
+
+#include <type_traits>
+
+
+namespace tf
+{
+template <typename R,typename T1,typename T2>
+///helper function to reduce macro sizes
+void helper_trace_ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2)
+{
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ooperator(op,dst,op1,op2);
+#endif
+}
+template <typename R,typename T1>
+///helper function to reduce macro sizes
+void helper_trace_ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1)
+{
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ooperator(op,dst,op1);
+#endif
+}
+template <typename R>
+///helper function to reduce macro sizes
+inline void helper_trace_ooperator_inde_cr(bool add,bool post,TraceableField<R> & dst)
+{
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ooperator(add?(post?"inc_":"inc"):(post?"dec_":"dec"),dst,dst);
+#endif
+}
+}
+
+/// define templated operator overload (member function)
+#define TraceableField_operator(OP) 		template <typename O> \
+						TraceableField<decltype( T() OP O())> operator OP (const TraceableField<O> & other) const { \
+							TraceableField<decltype( T() OP O())> ret(val OP other.val,errval OP other.errval); \
+							tf::helper_trace_ooperator(TraceableField_TOSTRING(OP),ret,*this,other);\
+							return ret;\
+						}
+/// define templated logic operator overload (member function); legacy define
+#define TraceableField_operator_logic(OP)	TraceableField_operator(OP)
+
+/// define templated operator overload (member function)
+#define TraceableField_operator_noparam(OP)	TraceableField<decltype( OP T())> operator OP () const{ \
+							TraceableField<decltype( OP T())> ret( OP val, OP errval); \
+							tf::helper_trace_ooperator(TraceableField_TOSTRING(OP),ret,*this); \
+							return ret;\
+						}
+/// define templated operator overload (member function)
+#define TraceableField_operator_self(OP)	TraceableField & operator OP (const TraceableField & other) { \
+							val OP other.val; \
+							errval OP other.errval; \
+							tf::helper_trace_ooperator(TraceableField_TOSTRING(OP),*this,*this,other);\
+							return * this; \
+						}
+/// define templated operator overload (external function)
+#define TraceableField_ext_operator(OP) 	template <typename T,typename O> \
+						typename std::enable_if<!TF_isTraceableField(T) && std::is_pod<T>::value && std::is_pod<O>::value && std::is_pod<decltype( T() OP O())>::value,TraceableField<decltype( T() OP O())> >::type operator OP (const T & val,const TraceableField<O> & other) { \
+							TraceableField<decltype( T() OP O())> ret(val OP other.val,val OP other.errval); \
+							tf::helper_trace_ooperator(TraceableField_TOSTRING(OP),ret,TraceableField<T>(val),other); \
+							return ret;\
+						} \
+						template <typename T,typename O> \
+						typename std::enable_if<!TF_isTraceableField(O) && std::is_pod<T>::value && std::is_pod<O>::value && std::is_pod<decltype( T() OP O())>::value,TraceableField<decltype( T() OP O())> >::type operator OP (const TraceableField<T> & val,const O & other) { \
+							TraceableField<decltype( T() OP O())> ret(val.val OP other,val.errval OP other); \
+							tf::helper_trace_ooperator(TraceableField_TOSTRING(OP),ret,val,TraceableField<O>(other)); \
+							return ret;\
+						}
+/// define templated logic operator overload (external function); legacy define
+#define TraceableField_ext_operator_logic(OP)	TraceableField_ext_operator(OP)
+
+
+
+template <typename T,typename  >
+/**
+    special wrapper class mainly for integer types to manipulate and log any access or operation that is performed with such types. operators that cannot be overloaded require code transformations as done by the tool FaultTrackerCV
+*/
+class TraceableField : public tf::TraceableFieldBase
+{
+public:
+    T val; ///< error free value
+    T errval; ///< value with error
+#if TF_TRACE_UNDEFINED
+public:
+    T udef_val_; ///< marks undefined bits of val
+    T udef_errval_; ///< marks undefined bits of errval
+#endif
+public:
+
+    /**
+        default ctor
+    */
+    TraceableField() : val(0),errval(0)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(0),udef_errval_(0)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_noarg(*this);
+#endif
+#endif
+    }
+
+    /**
+        val/errval ctor
+    */
+    inline TraceableField(const T & val,const T & errval) : val(val),errval(errval)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(-1),udef_errval_(-1)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_val_errval(*this);
+#else
+        udef_val_ = 0;
+        udef_errval_ = 0;
+#endif
+#endif
+    }
+    //template <typename O,typename = typename std::enable_if<!std::is_base_of<TraceableFieldBase,O>::value, decltype( *(T*)0 = O())>::type>
+    /**
+        "copy" ctor for wrapped type
+    */
+    inline TraceableField(const T & cpy) : val(cpy),errval(cpy)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(0),udef_errval_(0)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_const(*this);
+#endif
+#endif
+    }
+    template <typename O>
+    /**
+        conversion copy ctor
+    */
+    inline TraceableField(const TraceableField<O> & cpy) : val(cpy.val),errval(cpy.errval)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(cpy.udef_val_),udef_errval_(cpy.udef_errval_)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_copy(*this,cpy);
+#endif
+#endif
+    }
+    /**
+        copy ctor
+    */
+    inline TraceableField(const TraceableField & cpy) : val(cpy.val),errval(cpy.errval)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(cpy.udef_val_),udef_errval_(cpy.udef_errval_)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_copy(*this,cpy);
+#endif
+#endif
+    }
+
+    template <typename O>
+    /**
+        conversion move ctor
+    */
+    inline TraceableField(TraceableField<O> && cpy) : val(cpy.val),errval(cpy.errval)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(cpy.udef_val_),udef_errval_(cpy.udef_errval_)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_move(*this,cpy);
+#endif
+#endif
+    }
+
+    /**
+        move ctor
+    */
+    inline TraceableField(TraceableField && cpy) : val(cpy.val),errval(cpy.errval)
+#if TF_TRACE_UNDEFINED
+        ,udef_val_(cpy.udef_val_),udef_errval_(cpy.udef_errval_)
+#endif
+    {
+        width_=sizeof(T)*8;
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_CTOR_TRACE)
+        tf::trace::ctor_move(*this,cpy);
+#endif
+#endif
+    }
+    /**
+        dtor
+    */
+    inline ~TraceableField()
+    {
+#ifdef OPERATIONTRACING_H_INCLUDED
+#if !(TF_NO_DTOR_TRACE)
+        tf::trace::dtor(*this);
+#endif
+#endif
+    }
+
+    /**
+        @see tf::flags for possible flags
+    */
+    virtual uint32_t flags() const
+    {
+        return flags_;
+    }
+
+    /**
+        applies flags and resulting consequences to this field
+        @see tf::flags for possible flags
+
+    */
+    virtual void flags(uint32_t flags)
+    {
+        bool modified = false;
+        flags_ = flags;
+        if (flags_ & tf::flags::ALWAYSDEFINED)
+        {
+            udef_val_ = 0;
+            udef_errval_ = 0;
+            modified = true;
+        }
+        if (flags_ & tf::flags::UNDEFINEDISERROR)
+        {
+            if (udef_val_ || udef_errval_)
+            {
+                std::cout << "Warning: A traceable field was assigned the UNDEFINEDISERROR flag while it is undefined. this will not raise an error. [" << getName() << "]" << std::endl;
+            }
+        }
+        if (flags_ & tf::flags::VALISERRVAL)
+        {
+            val = errval;
+            udef_val_ = udef_errval_;
+            modified = true;
+        }
+
+        if (modified)
+            tf::trace::modified(*this);
+
+    }
+
+    /**
+        add an error to the traceable field
+        @todo implement
+    */
+    virtual bool addError(uint64_t error,unsigned * errorid) const
+    {
+
+        static_assert(sizeof(TraceableFieldBase_widestINT) >= sizeof(T),"Size of TraceableFieldBase_widestINT is smaller than the size of the type wrapped by a TraceableField.");
+
+        return false;
+    }
+
+    /**
+        change undefined bit masks. has no effect if tf::flags::ALWAYSDEFINED is set
+    */
+    virtual void setUDefMasks(uint64_t udval,uint64_t uderrval)
+    {
+        if (flags_ & tf::flags::ALWAYSDEFINED)
+        {
+            if (udval || uderrval)
+                std::cout << "Warning: trying to set UDefMask of field that is always defined: " << getName() << std::endl;
+            return;
+        }
+        udef_val_ = (T) udval;
+        udef_errval_ = (T) uderrval;
+        tf::trace::modified(*this);
+    }
+
+    /**
+        @return std::pair<uint64_t,uint64_t>(udef_val_,udef_errval_);
+    */
+    virtual std::pair<uint64_t,uint64_t> getUDefMasks()
+    {
+        return std::pair<uint64_t,uint64_t>(udef_val_,udef_errval_);
+    }
+
+    /**
+        returns the current values (val,errval) of a TraceableField.
+    */
+    virtual typename std::enable_if<std::is_integral<T>::value && (sizeof(T)<=sizeof(uint64_t)),std::pair<uint64_t,uint64_t> >::type getValues(){
+        return std::pair<uint64_t,uint64_t>(val,errval);
+    }
+
+    /**
+        sets the current values (val,errval) of a TraceableField. additional bits will be discarded
+    */
+    virtual typename std::enable_if<std::is_integral<T>::value && (sizeof(T)<=sizeof(uint64_t)),void >::type setValues(uint64_t v,uint64_t ev){
+        val = (T) v;
+        errval = (T) ev;
+    }
+
+
+    template<typename O>
+    TraceableField & operator= (const TraceableField<O> & other)
+    {
+        val = (T)other.val; // if POC apply error value
+        errval = (T)other.errval;
+#ifdef OPERATIONTRACING_H_INCLUDED
+        tf::trace::assign(*this,other);
+#endif
+        return *this;
+    }
+
+    TraceableField & operator= (const TraceableField & other)
+    {
+
+        val = (T)other.val; // if POC apply error value
+        errval = (T)other.errval;
+#ifdef OPERATIONTRACING_H_INCLUDED
+        tf::trace::assign(*this,other);
+#endif
+
+        return *this;
+    }
+
+
+    template<typename O>
+    typename std::enable_if<!std::is_base_of<TraceableFieldBase, O >::value,TraceableField &> ::type operator= (const O & other)
+    {
+        val = (T)other;
+        errval = (T)other;
+#ifdef OPERATIONTRACING_H_INCLUDED
+        tf::trace::assign(*this,TraceableField<O>(other));
+#endif
+
+        return *this;
+    }
+
+    TraceableField & operator= (TraceableField && other)
+    {
+        return operator=((const TraceableField &) other);
+    }
+
+
+
+    TraceableField_operator_logic(>)
+    TraceableField_operator_logic(<)
+    TraceableField_operator_logic(>=)
+    TraceableField_operator_logic(<=)
+    TraceableField_operator_logic(==)
+    TraceableField_operator_logic(!=)
+    TraceableField_operator_logic(&&)
+    TraceableField_operator_logic(||)
+
+    TraceableField_operator(+)
+    TraceableField_operator(-)
+    TraceableField_operator(*)
+    template <typename O>
+    /// must handle division by zero to supress SIGFPE
+    TraceableField<decltype( T() / O())> operator/ (const TraceableField<O> & other) const
+    {
+        TraceableField<O> tmpdiv(other);
+        if (tmpdiv.val == 0)
+        {
+            tmpdiv.val = 1;
+            tmpdiv.udef_val_ = -1;
+        }
+        if (tmpdiv.errval == 0)
+        {
+            tmpdiv.errval = 1;
+            tmpdiv.udef_errval_ = -1;
+        }
+        TraceableField<decltype( T() / O())> ret(val / tmpdiv.val,errval / tmpdiv.errval);
+        tf::helper_trace_ooperator("/",ret,*this,tmpdiv);
+        return ret;
+    }
+
+    TraceableField_operator(<<)
+    TraceableField_operator(>>)
+
+    TraceableField_operator(^)
+    TraceableField_operator(|)
+    TraceableField_operator(&)
+
+    TraceableField_operator(%)
+
+    TraceableField_operator_noparam(~)
+    TraceableField_operator_noparam(+)
+    TraceableField_operator_noparam(-)
+    TraceableField_operator_noparam(!)
+
+    TraceableField_operator_self(+=)
+    TraceableField_operator_self(-=)
+    TraceableField_operator_self(*=)
+    TraceableField_operator_self(/=)
+
+    TraceableField_operator_self(<<=)
+    TraceableField_operator_self(>>=)
+
+    TraceableField_operator_self(^=)
+    TraceableField_operator_self(|=)
+    TraceableField_operator_self(&=)
+
+    TraceableField operator--(int)
+    {
+        TraceableField ret(*this);
+        *this = *this - 1;
+        return ret;
+    }
+    TraceableField operator++(int)
+    {
+        TraceableField ret(*this);
+        *this = *this + 1;
+        return ret;
+    }
+    TraceableField & operator--()
+    {
+        *this = *this - 1;
+        return *this;
+    }
+    TraceableField & operator++()
+    {
+        *this = *this + 1;
+        return *this;
+    }
+
+
+};
+
+template <typename T>
+/**
+    proposed class to include literal experssion in trace output
+*/
+class TraceableLiteral
+{
+public:
+    const T val;
+    std::string & name;
+
+    TraceableLiteral(const T & t) : val(t) , name(*namebuffer.insert(etiss::toString(t).first)) {}
+    operator TraceableField<const T>()
+    {
+        TraceableField<const T> ret(val);
+        ret.name_ = name.c_str();
+        return ret;
+    }
+private:
+    static std::set<std::string> namebuffer; // this buffer should only grow to a reasonable size since the number of literals in a program is limited
+};
+
+extern TraceableField<uint32_t> * mem1; ///< test
+extern TraceableField<uint32_t> * mem2; ///< test
+
+
+TraceableField_ext_operator_logic(>)
+TraceableField_ext_operator_logic(<)
+TraceableField_ext_operator_logic(>=)
+TraceableField_ext_operator_logic(<=)
+TraceableField_ext_operator_logic(==)
+TraceableField_ext_operator_logic(!=)
+TraceableField_ext_operator_logic(&&)
+TraceableField_ext_operator_logic(||)
+
+TraceableField_ext_operator(+)
+TraceableField_ext_operator(-)
+TraceableField_ext_operator(*)
+TraceableField_ext_operator(/)
+
+TraceableField_ext_operator(<<)
+
+TraceableField_ext_operator(>>)
+
+TraceableField_ext_operator(^)
+TraceableField_ext_operator(|)
+TraceableField_ext_operator(&)
+
+TraceableField_ext_operator(%)
+
+#define TraceableField_DEFVAR_class2(X,Y) X##Y
+#define TraceableField_DEFVAR_class(X,Y) TraceableField_DEFVAR_class2(X,Y)
+#define TraceableField_DEFVAR_HELPER(TYPE,VARIABLENAME,CLASSNAME) class CLASSNAME : public TraceableField<TYPE>{public: CLASSNAME ():TraceableField(#VARIABLENAME){}} VARIABLENAME;
+#define TraceableField_DEFVAR(TYPE,VARIABLENAME) TraceableField<TYPE> VARIABLENAME
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const TraceableField<T> tf)
+{
+    os << tf.val << "[" << tf.errval << "]";
+    return os;
+}
+
+
+// helper getter/setter functions (by value). this function allows to perform access without knowing if a varable has type T or type TraceableField<T>
+// call [s/g]et[/Err]Val(...)
+namespace tf
+{
+
+template <typename T>
+T getVal(const TraceableField<T> & t)
+{
+    return t.val;
+}
+
+template <typename T>
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T>::type getVal(const T & t)
+{
+    return (T)t;
+}
+
+template <typename T>
+T getErrVal(const TraceableField<T> & t)
+{
+    return (T)t.errval;
+}
+
+template <typename T>
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T>::type getErrVal(const T & t)
+{
+    return (T)t;
+}
+
+template <typename T,typename...O>
+TraceableField<T> & setVal(TraceableField<T> & t,const T & val,const O & ... origins)
+{
+    t.val = val;
+    return t;
+}
+
+template <typename T,typename...O>
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T &>::type setVal( T & t,const T & val,const O & ... origins)
+{
+    return t = val;
+}
+
+template <typename T,typename...O>
+TraceableField<T> & setErrVal(TraceableField<T> & t,const T & val,const O & ... origins)
+{
+    t.errval = val;
+    return t;
+}
+
+template <typename T,typename...O>
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T &>::type setErrVal( T & t,const T & val,const O & ... origins)
+{
+    return t = val;
+}
+
+
+}
+
+// array write functions
+namespace tf
+{
+
+template <typename TA,typename TI,typename TV>
+auto helper_trace_arrayWrite(TA & array,const TI & index,const TV & value)
+-> typename std::enable_if<!TF_isTraceableField(decltype(array[0])),void>::type {}
+
+template <typename TA,typename TI,typename TV>
+auto helper_trace_arrayWrite(TA & array,const TI & index,const TV & value)
+-> typename std::enable_if<TF_isTraceableField(decltype(array[0])),void>::type
+{
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::arrayWrite(true,array[getVal(index)],asTraceableField(index),asTraceableField(value));
+    tf::trace::arrayWrite(false,array[getErrVal(index)],asTraceableField(index),asTraceableField(value));
+#endif
+}
+
+template <typename TA,typename TI,typename TV,typename TAR = typename std::remove_reference<decltype((*(TA*)0)[0])>::type>
+/**
+	handles simple array write operations
+*/
+inline typename std::enable_if<TF_isTraceableField2(TI,TAR) || !TF_isTraceableField(TI),void>::type write(TA & array,const TI & index,const TV & value)
+{
+    setVal(array[getVal(index)],getVal(value));
+    setErrVal(array[getErrVal(index)],getErrVal(value));
+
+    helper_trace_arrayWrite(array,index,value);
+
+}
+
+
+
+}
+
+// array write functions
+namespace tf
+{
+
+template <typename C,typename TA,typename TI,typename TV>
+auto helper_trace_arrayWriteIf(const C & cond,TA & array,const TI & index,const TV & value)
+-> typename std::enable_if<!TF_isTraceableField(decltype(array[0])),void>::type {}
+
+template <typename C,typename TA,typename TI,typename TV>
+auto helper_trace_arrayWriteIf(const C & cond,TA & array,const TI & index,const TV & value)
+-> typename std::enable_if<TF_isTraceableField(decltype(array[0])),void>::type
+{
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::arrayWriteIf(true,array[getVal(index)],asTraceableField(cond),asTraceableField(index),asTraceableField(value));
+    tf::trace::arrayWriteIf(false,array[getErrVal(index)],asTraceableField(cond),asTraceableField(index),asTraceableField(value));
+#endif
+}
+
+
+template <typename C,typename TA,typename TI,typename TV>
+/**
+	handles simple array write operations
+*/
+inline auto writeIf(const C & cond,TA & array,const TI & index,const TV & value) -> std::enable_if<!( (!TF_isTraceableField(decltype(array[0]))) && (TF_isTraceableField(C)||TF_isTraceableField(TI)||TF_isTraceableField(TV)))>
+{
+    if (getVal(cond))
+    {
+        setVal(array[getVal(index)],getVal(value),value,cond,array[getVal(index)],index);
+    }
+    if (getErrVal(cond))
+    {
+        setErrVal(array[getErrVal(index)],getErrVal(value),value,cond,array[getErrVal(index)],index);
+    }
+
+    helper_trace_arrayWriteIf(cond,array,index,value);
+
+}
+
+
+}
+
+// array read functions
+namespace tf
+{
+
+template <typename TA,typename TAR,typename TI>
+/// if index is not traceable field perform simple array access
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,TI>::value,TAR>::type _read(TA & array,const TI & index)
+{
+    return array[index]; // already traced if TraceableField
+}
+
+template <typename TA,typename TAR,typename TI>
+/// array element and index are traceablefield
+typename std::enable_if<std::is_base_of<TraceableFieldBase,TAR>::value && std::is_base_of<TraceableFieldBase,TI>::value,TAR>::type _read(TA & array,const TI & index)
+{
+    TAR ret(array[index.val].val,array[index.errval].errval);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::arrayRead(true,ret,array[index.val],index);
+    tf::trace::arrayRead(false,ret,array[index.errval],index);
+#endif
+    return ret;
+}
+template <typename TA,typename TAR,typename TI>
+/// index is traceablefield but array element isn't
+typename std::enable_if<(!std::is_base_of<TraceableFieldBase,TAR>::value) && std::is_base_of<TraceableFieldBase,TI>::value,TraceableField<TAR> >::type _read(TA & array,const TI & index)
+{
+    TraceableField<TAR> ret(array[index.val].val,array[index.errval].errval);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::arrayRead(true,ret,array[index.val],index);
+    tf::trace::arrayRead(false,ret,array[index.errval],index);
+#endif
+    return ret;
+}
+
+// other combinations are not valid/ cannot be implemented in a way that makes sense
+
+template <typename TA,typename TI>
+/**
+	handles simple array read operations
+*/
+inline auto read(TA & array,const TI & index) -> typename std::remove_reference<decltype(array[0])>::type
+{
+    return _read<TA,typename std::remove_reference<decltype(array[0])>::type,TI>(array,index);
+}
+
+}
+
+
+// ternary operator
+namespace tf
+{
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline const TraceableField<R> ternary(const TraceableField<C> & c,const TraceableField<T> & t,const TraceableField<E> & e)
+{
+    TraceableField<R> ret(c.val?t.val:e.val,c.errval?t.errval:e.errval);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ternary(ret,c,t,e);
+#endif
+    return ret;
+}
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,const TraceableField<R> >::type ternary(const TraceableField<C> & c,const T & t,const TraceableField<E> & e)
+{
+    TraceableField<R> ret(c.val?t:e.val,c.errval?t:e.errval);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ternary(ret,c,asTraceableField(t),e);
+#endif
+    return ret;
+}
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline typename std::enable_if<!std::is_base_of<TraceableFieldBase,E>::value,const TraceableField<R> >::type ternary(const TraceableField<C> & c,const TraceableField<T> & t,const E & e)
+{
+    TraceableField<R> ret(c.val?t.val:e,c.errval?t.errval:e);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ternary(ret,c,t,asTraceableField(e));
+#endif
+    return ret;
+}
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline typename std::enable_if<(!std::is_base_of<TraceableFieldBase,T>::value) && (!std::is_base_of<TraceableFieldBase,E>::value),const TraceableField<R> >::type ternary(const TraceableField<C> & c,const T & t,const E & e)
+{
+    TraceableField<R> ret(c.val?t:e,c.errval?t:e);
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ternary(ret,c,asTraceableField(t),asTraceableField(e));
+#endif
+    return ret;
+}
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline auto ternary(const C & c,const T & t,const E & e) -> typename std::enable_if<(!TF_isTraceableField(C)) && !TF_isTraceableField(R), const R>::type
+{
+    auto ret = c?t:e;
+    return ret;
+}
+
+template <typename C,typename T,typename E,typename R = tf_tdeclytype(T,E)>
+/**
+	notes:
+		returns const to safeguard against expressions like (bool()?x,y)++
+*/
+inline auto ternary(const C & c,const T & t,const E & e) -> typename std::enable_if<(!TF_isTraceableField(C)) && TF_isTraceableField(R), const R>::type
+{
+    auto ret = c?t:e;
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::ternary(ret,c,asTraceableField(t),asTraceableField(e));
+#endif
+    return ret;
+}
+
+
+
+
+}
+
+// assignIf operator
+namespace tf
+{
+
+template <typename C,typename T,typename E>
+/**
+	notes:
+*/
+inline auto assignIf(const C & c,T & t,const E & e) -> typename std::enable_if<std::is_base_of<TraceableFieldBase,C>::value && std::is_base_of<TraceableFieldBase,T>::value, T &>::type
+{
+    if (c.val)
+        setVal(t,(decltype(getVal(t)))getVal(e)); //NOTE this cast is needed for function matching. the assumption of previously valid code justifies this cast
+    if (c.errval)
+        setErrVal(t,(decltype(getVal(t)))getErrVal(e)); //NOTE this cast is needed for function matchin. the assumption of previously valid code justifies this cast
+
+#ifdef OPERATIONTRACING_H_INCLUDED
+    tf::trace::assignIf(t,asTraceableField(c),asTraceableField(e));
+#endif
+    return t;
+}
+
+template <typename C,typename T,typename E>
+/**
+	notes:
+*/
+inline auto assignIf(const C & c,T & t,const E & e) -> typename std::enable_if<!TF_isTraceableField(C) , T &>::type
+{
+    if (c)
+        t = e;
+    return t;
+}
+
+}
+
+// log that error information has been lost, if val == errval then no message will be printed if TRACEABLEFIELD_TreatPotentialErrorInfoLossAsError is defined as 0
+namespace tf
+{
+template <typename T>
+typename std::enable_if<std::is_base_of<TraceableFieldBase,T>::value,void>::type logIL(const T & t)
+{
+
+    if (t.val == t.errval)
+    {
+#if TRACEABLEFIELD_TreatPotentialErrorInfoLossAsError
+        std::cerr << "Error information could be lost: [TODO: description]" << std::endl;
+#endif
+        return;
+
+    }
+
+    std::cerr << "Error information lost: [TODO: description]" << std::endl;
+
+}
+template <typename T>
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,void>::type logIL(const T & t)
+{
+    // no error info lost since type is not traceablefield
+}
+
+template <typename T>
+/// get value (currently error value) and log information loss
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T>::type getValIL(const T & t)
+{
+    return t;
+}
+
+
+
+template <typename T>
+/// get value (currently error value) and log information loss
+typename std::enable_if<!std::is_base_of<TraceableFieldBase,T>::value,T>::type getValIL(const TraceableField<T> & t)
+{
+    logIL(t);
+    return getErrVal(t);
+}
+
+}
+
+
+
+
+#define tf_funccall1(FUNCNAME,PARAMT1) 	auto FUNCNAME(PARAMT1 p1) -> TraceableField<decltype(FUNCNAME(tf::getVal(p1)))> { \
+											TraceableField<decltype(FUNCNAME(tf::getVal(p1)))> ret(FUNCNAME(tf::getVal(p1)),FUNCNAME(tf::getErrVal(p1)));\
+											tf::trace::bbop(ret,tf::asTraceableField(p1)); \
+											return ret; \
+										};
+#define tf_funccall2(FUNCNAME,PARAMT1,PARAMT2) 	auto FUNCNAME(PARAMT1 p1,PARAMT2 p2) -> TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2)))> { \
+											TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2)))> ret(FUNCNAME(tf::getVal(p1),tf::getVal(p2)),FUNCNAME(tf::getErrVal(p1),tf::getErrVal(p2)));\
+											tf::trace::bbop(ret,tf::asTraceableField(p1),tf::asTraceableField(p2)); \
+											return ret; \
+										};
+#define tf_funccall3(FUNCNAME,PARAMT1,PARAMT2,PARAMT3) 	auto FUNCNAME(PARAMT1 p1,PARAMT2 p2,PARAMT3 p3) -> TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3)))> { \
+											TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3)))> ret(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3)),FUNCNAME(tf::getErrVal(p1),tf::getErrVal(p2),tf::getErrVal(p3)));\
+											tf::trace::bbop(ret,tf::asTraceableField(p1),tf::asTraceableField(p2),tf::asTraceableField(p3)); \
+											return ret; \
+										};
+#define tf_funccall5(FUNCNAME,PARAMT1,PARAMT2,PARAMT3,PARAMT4,PARAMT5) 	auto FUNCNAME(PARAMT1 p1,PARAMT2 p2,PARAMT3 p3,PARAMT4 p4,PARAMT5 p5) -> TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3),tf::getVal(p4),tf::getVal(p5)))> { \
+											TraceableField<decltype(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3),tf::getVal(p4),tf::getVal(p5)))> ret(FUNCNAME(tf::getVal(p1),tf::getVal(p2),tf::getVal(p3),tf::getVal(p4),tf::getVal(p5)),FUNCNAME(tf::getErrVal(p1),tf::getErrVal(p2),tf::getErrVal(p3),tf::getErrVal(p4),tf::getErrVal(p5)));\
+											tf::trace::bbop(ret,tf::asTraceableField(p1),tf::asTraceableField(p2),tf::asTraceableField(p3)); \
+											tf::trace::bbop(ret,ret,tf::asTraceableField(p4),tf::asTraceableField(p5)); \
+											return ret; \
+										};
+
+
+
+#define TRACEABLEFIELD_INCLUDE_BODY
+#include "OperationTracing.h"
+
+#endif
+
+

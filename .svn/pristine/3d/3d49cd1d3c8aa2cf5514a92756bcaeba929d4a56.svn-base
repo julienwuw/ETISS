@@ -1,0 +1,175 @@
+#include "or1ksimcpu.h"
+#include <mutex>
+#include <iostream>
+
+#include <dlfcn.h>
+
+namespace
+{
+int upr(void              *class_ptr,
+        unsigned long int  addr,
+        unsigned char      mask[],
+        unsigned char      rdata[],
+        int                data_len)
+{
+    or1ksimcpu * cpu = (or1ksimcpu*) class_ptr;
+    /*
+    std::cout << "read called: 0x" << std::hex << addr << std::endl;
+    std::cout << "\tmask: ";
+    for ( int i = 0;i<data_len;++i)
+        std::cout << "0x" << std::hex << +mask[i] << " ";
+    std::cout << std::endl;
+    */
+    return cpu->read(addr,mask,rdata,data_len);
+}
+int upw (void              *class_ptr,
+         unsigned long int  addr,
+         unsigned char      mask[],
+         unsigned char      wdata[],
+         int                data_len)
+{
+    or1ksimcpu * cpu = (or1ksimcpu*) class_ptr;
+    /*
+    std::cout << "write called: 0x" << std::hex << addr << std::endl;
+    */
+    return cpu->write(addr,mask,wdata,data_len);
+}
+
+}
+
+or1ksimcpu::or1ksimcpu()
+{
+
+    valid_ = true;
+
+    std::string libfile = etiss::cfg().get<std::string>("etiss_wd","./") + "/or1ksim/compiled/lib/libsim.so";
+    libhandle = dlopen(libfile.c_str(),RTLD_LOCAL|RTLD_NOW);
+    if (!libhandle)
+    {
+        etiss::log(etiss::ERROR,"failed to load the or1ksim library",dlerror());
+        valid_ = false;
+        return;
+    }
+
+    int  (*or1ksim_init) (int         argc,
+                          char       *argv[],
+                          void       *class_ptr,
+                          int       (*upr) (void              *class_ptr,
+                                            unsigned long int  addr,
+                                            unsigned char      mask[],
+                                            unsigned char      rdata[],
+                                            int                data_len),
+                          int       (*upw) (void              *class_ptr,
+                                            unsigned long int  addr,
+                                            unsigned char      mask[],
+                                            unsigned char      wdata[],
+                                            int                data_len));
+
+    or1ksim_init = (decltype(or1ksim_init)) dlsym(libhandle,"or1ksim_init");
+
+    if (!or1ksim_init)
+    {
+        etiss::log(etiss::ERROR,"failed to load the or1ksim library",dlerror());
+        valid_ = false;
+        return;
+    }
+
+    args.push_back("./");
+    args.push_back("--file");
+    cfgfile = etiss::cfg().get<std::string>("etiss_wd","./") + "or1ksim/or1ksim.cfg";
+    args.push_back(cfgfile.c_str());
+
+    if (or1ksim_init(args.size(),(char**)&args[0],(void*)this,upr,upw) != 0)
+    {
+        valid_ = false;
+        return;
+    }
+
+    or1ksim_run = (decltype(or1ksim_run)) dlsym(libhandle,"or1ksim_run");
+
+    or1ksim_set_time_point = (decltype(or1ksim_set_time_point)) dlsym(libhandle,"or1ksim_set_time_point");
+
+    or1ksim_get_time_period = (decltype(or1ksim_get_time_period)) dlsym(libhandle,"or1ksim_get_time_period");
+
+    bus = 0;
+
+
+}
+or1ksimcpu::~or1ksimcpu()
+{
+    if (libhandle)
+        dlclose(libhandle);
+        delete bus;
+}
+int32_t or1ksimcpu::execute()
+{
+    bus = new etiss::interfaces::Delegate(*plugin_system_,*plugin_cpu_);
+    or1ksim_set_time_point();
+    or1ksim_run(-1);
+    return etiss::RETURNCODE::CPUFINISHED;
+}
+bool or1ksimcpu::valid()
+{
+    return valid_;
+}
+void or1ksimcpu::addedToCPUCore(etiss::CPUCore * core)
+{
+
+}
+void or1ksimcpu::removedFromCPUCore(etiss::CPUCore * core)
+{
+
+}
+
+bool or1ksimcpu::read(unsigned long int  addr,
+                      unsigned char      mask[],
+                      unsigned char      rdata[],
+                      int                data_len)
+{
+    int len = 0;
+    for (int i = 0;i<data_len;++i)
+        if (mask[i])
+            ++len;
+    if (len == 0)
+        return false;
+    int off = 0;
+    while (mask[off] == 0) ++off;
+    uint64_t time = plugin_cpu_->cpuTime_ps + (int64_t) (or1ksim_get_time_period()*1000000000.0) + plugin_cpu_->cpuCycleTime_ps;
+    or1ksim_set_time_point();
+    return !bus->read(false,time,addr+off,rdata+off,len);
+}
+bool or1ksimcpu::write(unsigned long int  addr,
+                       unsigned char      mask[],
+                       unsigned char      wdata[],
+                       int                data_len)
+{
+    int len = 0;
+    for (int i = 0;i<data_len;++i)
+        if (mask[i])
+            ++len;
+    int off = 0;
+    while (mask[off] == 0) ++off;
+    uint64_t time = plugin_cpu_->cpuTime_ps + (int64_t) (or1ksim_get_time_period()*1000000000.0) + plugin_cpu_->cpuCycleTime_ps;
+    or1ksim_set_time_point();
+    return !bus->write(false,time,addr+off,wdata+off,len);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

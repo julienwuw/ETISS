@@ -1,0 +1,264 @@
+#
+#	Copyright (c) 2014 Institute for Electronic Design Automation, TU Munich
+#	
+#	The above copyright notice and this permission notice shall be included in
+#	all copies or substantial portions of the Software.
+#	
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#	THE SOFTWARE.
+#	
+#	
+#	Author: Marc Greim <marc.greim@mytum.de>
+#
+
+# simple CMakeLists.txt template that can be placed in a ArchImpl/JITImpl/PluginImpl/project 
+# folder to have a simple and functional initial project cmake file. This file will include
+# all *.h and *.cpp files in this folder as part of the project. The variable 
+# "ETISS_PROJECT_NAME" must be set to the project name. it will also become the library name
+# "ETISS_PROJECT_PATH" can be set to a special project path. in most case this doesn't need to be set
+## set(ETISS_PROJECT_NAME test)
+## set(ETISS_PROJECT_PATH test)
+# in case it is more suitable to use a makefile to build a project the following code should 
+# be put before including this file:
+## set(ETISS_PROJECT_NAME test)
+## set(ETISS_PROJECT_PATH ${CMAKE_CURRENT_LIST_DIR})
+## set(${ETISS_PROJECT_NAME}_MAKEFILE <makefile file>) // e.g. set(ETISS_PROJECT_MAKEFILE Makefile)
+# please note that in case of a makefile project only the file lib${ETISS_PROJECT_NAME}.so will 
+# be installed (in case of other platforms the typical library name is expected. 
+# see ${CMAKE_SHARED_LIBRARY_PREFX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+# if the ETISS_PROJECT_DOC_DIRS is not set then the project directory will be searched and documented by doxygen
+## set(ETISS_PROJECT_DOC_DIRS "${ETISS_PROJECT_PATH}/document_this" "${ETISS_PROJECT_PATH}/and_this_folder" )
+
+include(GenerateExportHeader)
+
+project(${ETISS_PROJECT_NAME} CXX)
+
+#real path of project. may resolve problems
+get_filename_component(ETISS_PROJECT_PATH_REAL ${ETISS_PROJECT_PATH} REALPATH)
+			
+
+find_program(MAKE_COMMAND make)
+#if the project cannot be build then do nothing
+if(MAKE_COMMAND OR NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+
+	string(TOUPPER ${ETISS_PROJECT_NAME} ETISS_PROJECT_NAME_UPPER )
+	
+	### check for c++0x support
+	include(CheckCXXCompilerFlag)
+	CHECK_CXX_COMPILER_FLAG("-std=c++11" ETISS_USE_CXX11)
+	CHECK_CXX_COMPILER_FLAG("-std=c++0x" ETISS_USE_CXX0X)
+	if(ETISS_USE_CXX11)
+		set(C_ETISS_USE_CXX11 1)
+		set(C_ETISS_USE_CXX0X 1)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	elseif(ETISS_USE_CXX0X)
+		set(C_ETISS_USE_CXX11 0)
+		set(C_ETISS_USE_CXX0X 1)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	else()
+		set(C_ETISS_USE_CXX11 0)
+		set(C_ETISS_USE_CXX0X 0)
+			message(ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11/C++0x support. ETISS requires at least C++0x as implemented by gcc 4.6. Please use a different C++ compiler.")
+	endif()
+
+	### find project files (find files -> store in LOCAL_FILES -> append LOCAL_FILES to LOCAL_PROJECT_FILES
+	if(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		unset(LOCAL_FILES)
+		unset(LOCAL_PROJECT_FILES)
+		FILE(GLOB LOCAL_FILES ${ETISS_PROJECT_PATH}/*.cpp)
+		set(LOCAL_PROJECT_FILES ${LOCAL_PROJECT_FILES} ${LOCAL_FILES})
+		FILE(GLOB LOCAL_FILES ${ETISS_PROJECT_PATH}/*.h)
+		set(LOCAL_PROJECT_FILES ${LOCAL_PROJECT_FILES} ${LOCAL_FILES})
+	endif()
+
+	### generate a helper header file that needs to be included in a .cpp file that exports symbols
+	string(TOUPPER ${ETISS_PROJECT_NAME} ETISS_PROJECT_NAME_U)
+	if (NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		unset(ETISS_EXPORT_ADDITIONALCODE)
+	else()
+		set(ETISS_EXPORT_ADDITIONALCODE "#define ETISS_LIB_SHARED 1")
+	endif()
+
+	#check for make command (only needed for makefile targets)
+
+
+	if(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		include_directories(${PROJECT_BINARY_DIR})
+		if(ETISS_SOURCE_INSTALL)
+			install(DIRECTORY "${PROJECT_BINARY_DIR}/"
+					DESTINATION include
+					FILES_MATCHING
+						PATTERN "*.h"
+						PATTERN "*.hpp"
+						PATTERN ".svn" EXCLUDE
+						PATTERN "dox" EXCLUDE)
+		endif()
+		include_directories(include)
+		if(ETISS_SOURCE_INSTALL)
+			install(DIRECTORY include/
+					DESTINATION include
+					FILES_MATCHING
+						PATTERN "*.h"
+						PATTERN "*.hpp"
+						PATTERN ".svn" EXCLUDE
+						PATTERN "dox" EXCLUDE)
+			FILE(GLOB LOCAL_FILES ${ETISS_PROJECT_PATH}/*.h ${ETISS_PROJECT_PATH}/*.hpp)
+			install(FILES ${LOCAL_FILES}
+					DESTINATION include
+					OPTIONAL)
+		endif()
+	endif()
+
+	if(DEFINED ${ETISS_PROJECT_NAME}_TEMPLATE_REINCLUDE)
+		set(${ETISS_PROJECT_NAME}_TEMPLATE_REINCLUDED ON)
+		message("reincluding ${${ETISS_PROJECT_NAME}_TEMPLATE_REINCLUDE}")
+		include(${${ETISS_PROJECT_NAME}_TEMPLATE_REINCLUDE})
+	else()
+		message("${ETISS_PROJECT_NAME}_TEMPLATE_REINCLUDE may be set to include a file.")
+	endif()
+	
+	if (DEFINED ETISS_PROJECT_DOC_DIRS)
+		list(APPEND P_ETISS_DOX_LOCATIONS ${ETISS_PROJECT_DOC_DIRS} PARENT_SCOPE)
+	else ()
+		list(APPEND P_ETISS_DOX_LOCATIONS "${ETISS_PROJECT_PATH}" PARENT_SCOPE)
+	endif()
+
+	if(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		message("${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES was set to ${${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES}")
+	else()
+		if(DEFINED ${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES)
+			message(WARNING "${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES has no effect for makefile projects")
+		endif()
+	endif()
+
+	if (EXISTS ${ETISS_PROJECT_NAME}Config.cmake.in)
+		configure_file(
+		  "${PROJECT_SOURCE_DIR}/${ETISS_PROJECT_NAME}Config.cmake.in"
+		  "${PROJECT_BINARY_DIR}/${ETISS_PROJECT_NAME}Config.cmake"
+		  @ONLY
+		 )
+		install(FILES
+		  "${PROJECT_BINARY_DIR}/${ETISS_PROJECT_NAME}Config.cmake"
+		  DESTINATION "${INSTALL_CMAKE_DIR}/cmake")
+	else()
+		message("${ETISS_PROJECT_NAME}Config.cmake.in doesn't exists. it is recommended to provide such a file to configure other cmake projects that may use this library. please have a look at ETISSConfig.cmake.in to see the main cmake file and where this file will be included.")
+	endif()
+
+	if(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		#for windows copy source files only. dll not supported
+		if(ETISS_SOURCE_INSTALL)
+			add_custom_target(${ETISS_PROJECT_NAME}_dep ALL
+					  COMMENT "helper target to ensure creation of dependencies"
+					  SOURCES ${LOCAL_PROJECT_FILES} ${${ETISS_PROJECT_NAME}_ADDITIONAL_PROJECT_FILES})
+			set(ETISS_FILES_SRC ${ETISS_FILES_SRC} ${LOCAL_PROJECT_FILES} ${${ETISS_PROJECT_NAME}_ADDITIONAL_PROJECT_FILES} )
+		else()
+			add_library(${ETISS_PROJECT_NAME} SHARED ${LOCAL_PROJECT_FILES} ${${ETISS_PROJECT_NAME}_ADDITIONAL_PROJECT_FILES})
+			target_link_libraries(${ETISS_PROJECT_NAME} ETISS)
+			set_target_properties(${ETISS_PROJECT_NAME} PROPERTIES COMPILE_DEFINITIONS "ETISS_PLUGIN_EXPORTS;ETISS_INTREE_EXPORT;${ETISS_PROJECT_NAME}_EXPORTS;${ETISS_PROJECT_NAME_UPPER}_EXPORTS;ETISS_LIB_SHARED=1")
+			if (ETISS_SOURCE_INSTALL)
+				set_target_properties(${ETISS_PROJECT_NAME} PROPERTIES LINK_FLAGS "/FORCE")
+				set_target_properties(${ETISS_PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} /MD")
+				target_link_libraries(${ETISS_PROJECT_NAME} MSVCRT.lib)
+			endif()
+			install(TARGETS ${ETISS_PROJECT_NAME}
+					RUNTIME DESTINATION lib/plugins
+					LIBRARY DESTINATION lib/plugins
+					ARCHIVE DESTINATION lib/plugins
+					OPTIONAL
+					)
+			set_target_properties(	${ETISS_PROJECT_NAME}
+									PROPERTIES 	CXX_VISIBILITY_PRESET hidden
+											VISIBILITY_INLINES_HIDDEN 1
+									)
+			if (DEFINED ${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES)
+				target_link_libraries(	${ETISS_PROJECT_NAME} 
+							${${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES}
+							)
+				set(ETISS_FILES_LNK ${ETISS_FILES_LNK} ${${ETISS_PROJECT_NAME}_ADDITIONAL_LIBRARIES})
+			endif()
+		endif()
+	else(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+		if (MAKE_COMMAND)
+			
+			#include paths
+			unset(tmp)
+			unset(tmp2)
+			get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+			foreach(dir ${dirs})
+				set(tmp "${tmp} -I\"${dir}\"")
+				set(tmp2 "${tmp2} \"${dir}\"")
+			endforeach()
+			set(tmp "${tmp} -I\"${PROJECT_BINARY_DIR}\"")
+			set(tmp2 "${tmp2} \"${PROJECT_BINARY_DIR}\"")
+			set(tmp "${tmp} -I\"${PROJECT_SOURCE_DIR}\"")
+			set(tmp2 "${tmp2} \"${PROJECT_SOURCE_DIR}\"")
+			
+			#debug param
+			if (CMAKE_BUILD_TYPE EQUAL "Debug")
+				set(C_DEBUG 1)
+			else()
+				set(C_DEBUG 0)
+			endif()
+			
+			
+			#makefile target
+			add_custom_target(${ETISS_PROJECT_NAME}_make ALL
+			${MAKE_COMMAND} -f ${${ETISS_PROJECT_NAME}_MAKEFILE} BUILD_DIR=${PROJECT_BINARY_DIR} INCLUDE_ARGS=${tmp} INCLUDE_DIRS=${tmp2} DEBUG=${C_DEBUG} ${ETISS_PROJECT_NAME}_EXPORTS=1 ${ETISS_PROJECT_NAME_UPPER}_EXPORTS=1
+			WORKING_DIRECTORY ${ETISS_PROJECT_PATH_REAL}
+			DEPENDS ${${ETISS_PROJECT_NAME}_MAKEFILE}
+			COMMENT "${ETISS_PROJECT_NAME} Makefile target" VERBATIM
+			)
+			
+			#generate headers and add file as non-source files to enable editing in an IDE
+			add_library(${ETISS_PROJECT_NAME}_make_genheader SHARED ${${ETISS_PROJECT_NAME}_MAKEFILE} ${${ETISS_PROJECT_NAME}_MAKEFILE_PROJECTFILES})
+			set_source_files_properties(${${ETISS_PROJECT_NAME}_MAKEFILE} PROPERTIES HEADER_FILE_ONLY TRUE)
+			foreach(pfile ${${ETISS_PROJECT_NAME}_MAKEFILE_PROJECTFILES})
+				set_source_files_properties(${pfile} PROPERTIES HEADER_FILE_ONLY TRUE)
+			endforeach()
+			
+			SET_TARGET_PROPERTIES(${ETISS_PROJECT_NAME}_make_genheader PROPERTIES LINKER_LANGUAGE CXX)
+			generate_export_header(	${ETISS_PROJECT_NAME}_make_genheader
+					BASE_NAME ${ETISS_PROJECT_NAME}
+					EXPORT_FILE_NAME export_shared.h
+					)
+			add_custom_command(TARGET ${ETISS_PROJECT_NAME}_make_genheader
+					   POST_BUILD
+					   COMMAND ${CMAKE_COMMAND} -E remove -f ${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}_make_genheader${CMAKE_SHARED_LIBRARY_SUFFIX}
+					   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+					   COMMENT "Removing helper shared library target output"
+					   OPTIONAL
+					   )
+			
+			install(CODE "
+							if(NOT EXISTS ${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+								if(EXISTS ${PROJECT_SOURCE_DIR}/build/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+									message(WARNING \"${PROJECT_SOURCE_DIR}/build/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} should be moved to ${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+									execute_process(COMMAND ${CMAKE_COMMAND} -E copy \"${PROJECT_SOURCE_DIR}/build/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\" \"${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+								elseif(EXISTS ${PROJECT_SOURCE_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+									message(WARNING \"${PROJECT_SOURCE_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} should be moved to ${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+									execute_process(COMMAND ${CMAKE_COMMAND} -E copy \"${PROJECT_SOURCE_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\" \"${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+								else()
+									message(WARNING \"Installation of makefile project ${ETISS_PROJECT_NAME} failed. ${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} was not available to install\")
+								endif()
+							endif()
+						")
+			
+			install(	FILES ${PROJECT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${ETISS_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+						DESTINATION lib/plugins
+						OPTIONAL
+					)
+		else(MAKE_COMMAND)
+			message(WARNING "Project ${ETISS_PROJECT_NAME} could not be build because $make is not available")
+		endif(MAKE_COMMAND)
+	endif(NOT DEFINED ${ETISS_PROJECT_NAME}_MAKEFILE)
+endif()
+
+ETISS_UPDATE_GLOBAL_VARIABLES()
+
+

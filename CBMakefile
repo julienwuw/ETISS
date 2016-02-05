@@ -1,0 +1,35 @@
+#Helper makefile for CodeBlocks
+
+$(shell mkdir -p build)
+
+.cb/rebuild_Debug2:
+	mkdir -p .cb
+	touch .cb/rebuild_Debug2
+	
+.cb/rebuild_Release2:
+	mkdir -p .cb
+	touch .cb/rebuild_Release2
+
+.cb/rebuild_Debug: .cb/rebuild_Debug2
+	make cleanall
+	mkdir -p .cb
+	touch .cb/rebuild_Debug
+	
+.cb/rebuild_Release: .cb/rebuild_Release2
+	make clean
+	mkdir -p .cb
+	touch .cb/rebuild_Release
+
+.PHONY: Debug
+Debug: .cb/rebuild_Debug
+	touch .cb/rebuild_Release2
+	make all
+	make main
+	
+.PHONY: Release
+Release: .cb/rebuild_Release
+	touch .cb/rebuild_Debug2
+	make all DEBUG=0
+	make main DEBUG=0
+
+

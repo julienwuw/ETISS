@@ -1,0 +1,21 @@
+{
+global: 
+	Verilator_countCPUArch;
+	Verilator_nameCPUArch;
+	Verilator_createCPUArch;
+	Verilator_deleteCPUArch;
+	Verilator_countJIT;
+	Verilator_nameJIT;
+	Verilator_createJIT;
+	Verilator_deleteJIT;
+	Verilator_countPlugin;
+	Verilator_namePlugin;
+	Verilator_createPlugin;
+	Verilator_deletePlugin;
+	Verilator_etissversion;
+	Verilator_getFileCount;
+	Verilator_getFileName;
+	Verilator_getFileData;
+local: *;
+};
+

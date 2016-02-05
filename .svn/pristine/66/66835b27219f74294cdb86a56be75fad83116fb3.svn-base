@@ -1,0 +1,72 @@
+
+BUILD_DIR?=.
+
+DEBUG?=1
+
+ifeq ($(DEBUG),0)
+	DBGPARAM= -g
+	OPTLEVEL?= -O3
+else
+	DBGPARAM= -g
+	OPTLEVEL?= -O0
+endif
+
+
+
+# Change path as needed
+ETISS_FOLDER=../..
+
+
+
+CFLAGS=-std=c++0x -c -MMD -Wall -fPIC $(OPTLEVEL) $(DBGPARAM) -DDEBUG=$(DEBUG) -Iinclude -I$(ETISS_FOLDER)/include -I$(ETISS_FOLDER)/include_c -Iverilated/or1k/obj_dir -Iverilated/include_tf -Iverilated/include_tf/vltstd
+OCFLAGS=-std=c++0x -c -MMD -Wall -fPIC $(OPTLEVEL) $(DBGPARAM) -DDEBUG=$(DEBUG) -IO -I$(ETISS_FOLDER)/include -I$(ETISS_FOLDER)/include_c -Iverilated/or1k/obj_dir -Iverilated/include_clean -Iverilated/include_clean/vltstd
+
+all: recursive
+
+SOURCEFILES=$(wildcard src/*.cpp) $(wildcard src/*/*.cpp) $(wildcard src/*/*/*.cpp) $(wildcard src/*/*/*/*.cpp)
+OBJECTFILES=$(SOURCEFILES:src/%.cpp=build/%.o)
+DEPFILES=$(OBJECTFILES:%.o=%.d)
+
+VOBJECTFILES=$(wildcard build/verilated/*.o) $(wildcard build/verilated/*/*.o) $(wildcard build/verilated/*/*/*.o)
+
+
+
+build/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+	
+buildO/%.o: O/src/%.cpp
+	@mkdir -p $(dir $@)
+	gcc $(OCFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+
+
+libVerilator.o : libVerilator.cpp
+	gcc $(CFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+libVerilatorO.o : libVerilatorO.cpp
+	gcc $(OCFLAGS)  $(INCLUDE_ARGS)  -o $@ $<
+O/OR1KVCPU.o : O/OR1KVCPU.cpp
+	gcc $(OCFLAGS)  $(INCLUDE_ARGS)  -Iinclude -o $@ $<
+	
+-include *.d
+-include $(DEPFILES)
+
+	
+$(BUILD_DIR)/libVerilator.so : $(OBJECTFILES) libVerilator.o
+	gcc -std=c++0x -fPIC -shared $(OPTLEVEL) $(DBGPARAM) $(INCLUDE_ARGS)  -o $(BUILD_DIR)/libVerilator.so libVerilator.o $(OBJECTFILES) $(VOBJECTFILES) #-Wl,--version-script=VerilatorABI.cfg
+	#verilated/libVerilator.a verilated/libor1k.a -Wl,--version-script=VerilatorABI.cfg
+	
+$(BUILD_DIR)/libVerilatorO.so : O/OR1KVCPU.o libVerilatorO.o
+	gcc -std=c++0x -fPIC -shared $(OPTLEVEL) $(DBGPARAM) $(INCLUDE_ARGS) -o $(BUILD_DIR)/libVerilatorO.so libVerilatorO.o O/OR1KVCPU.o ./verilated/libor1kO.a ./verilated/libVerilatorO.a #-Wl,--version-script=VerilatorABIO.cfg
+
+.PHONY: recursive
+recursive:
+	cd verilated && make DEBUG=$(DEBUG) INCLUDE_ARGS="$(INCLUDE_ARGS)"
+	make $(BUILD_DIR)/libVerilator.so INCLUDE_ARGS="$(INCLUDE_ARGS)" BUILD_DIR=$(BUILD_DIR) DEBUG=$(DEBUG)
+
+#make $(BUILD_DIR)/libVerilatorO.so INCLUDE_ARGS="$(INCLUDE_ARGS)" BUILD_DIR=$(BUILD_DIR)  DEBUG=$(DEBUG)
+	
+clean:
+	rm -R -f ./build
+	rm -f libVerilator.so
+	rm -f libVerilator.o
+	rm -f libVerilator.d

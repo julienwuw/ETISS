@@ -1,0 +1,22 @@
+{
+global: 
+	or1ksim_countCPUArch;
+	or1ksim_nameCPUArch;
+	or1ksim_createCPUArch;
+	or1ksim_deleteCPUArch;
+	or1ksim_countJIT;
+	or1ksim_nameJIT;
+	or1ksim_createJIT;
+	or1ksim_deleteJIT;
+	or1ksim_countPlugin;
+	or1ksim_namePlugin;
+	or1ksim_createPlugin;
+	or1ksim_deletePlugin;
+	or1ksim_etissversion;
+	or1ksim_getFileCount;
+	or1ksim_getFileName;
+	or1ksim_getFileData;
+	or1ksim_getFileSize;
+local: *;
+};
+

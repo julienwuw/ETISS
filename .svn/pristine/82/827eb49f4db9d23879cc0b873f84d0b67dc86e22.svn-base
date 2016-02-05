@@ -1,0 +1,277 @@
+#ifndef TRACEABLEFIELDBASE_H_INCLUDED
+#define TRACEABLEFIELDBASE_H_INCLUDED
+
+#include "TraceableFieldDef.h"
+
+#if TF_ETISS_VCD
+#include "etiss/interfaces/VCD.h"
+#endif
+
+#include "etiss/VirtualStruct.h"
+
+#include "ModuleNameExtension.h"
+
+namespace tf {
+
+
+/**
+    base class of TraceableField that allows general (non templated) access to TraceableField
+*/
+class TraceableFieldBase
+{
+public:
+    /**
+        if the traceable field is part of an array whose declaration was followed by TracelableField_register() then this class will hold information about the position in that array and the array size
+        @see TraceableFieldBase::arrayInfo
+    */
+    class ArrayInfo {
+    public:
+        std::vector<size_t> position;
+        std::vector<size_t> size;
+    };
+
+private:
+
+    mutable const char * name_; ///< name of the field. this is the pointer passed to the constructor and must remain valid during lifetime. this pointer will not be cleaned up by traceable field
+
+    mutable bool registered_; ///< if true then this field has registered itself and will perform cleanup operations in its dtor
+
+
+
+public:
+
+#if TF_ETISS_VCD
+    etiss::interfaces::VCD * vcd; ///< if set then tf::operation() will write changes to the vcd object
+#endif
+
+public:
+    unsigned width_; ///< set by TraceableField
+
+protected:
+	uint32_t flags_; ///< @see tf::flags for possible flags
+public:
+	virtual uint32_t flags() const = 0; ///< implemented by TraceableField
+	virtual void flags(uint32_t flags) = 0; ///< implemented by TraceableField
+
+public:
+	const char * modulePrefix; ///< @see ModuleNameExtension.h
+public:
+    mutable ArrayInfo * arrayInfo; /// @see ArrayInfo
+protected:
+
+    /**
+    	@param typeinfo used for addError function
+    */
+    inline TraceableFieldBase() : name_(0),vcd(0),flags_(0),modulePrefix(0),arrayInfo(0)
+    {
+#ifdef MODULENAMEEXTENSION_H_INCLUDED
+		if (tf::moduleNamePresent)
+			modulePrefix = tf::getFullCurrentModuleName();
+#endif
+#if TF_REGISTER_ALL
+        registered_ = instances_register_;
+        if (registered_)
+        {
+            instances_.insert(this);
+            fieldCArray.push_back(this);
+        }
+#endif
+    }
+
+    /**
+    	@attention the functionality has to be implemented in TraceableField not here
+    */
+    inline TraceableFieldBase(const TraceableFieldBase & cpy) : name_(0),vcd(0),flags_(0),modulePrefix(0),arrayInfo(0)
+    {
+#ifdef MODULENAMEEXTENSION_H_INCLUDED
+		if (tf::moduleNamePresent)
+			modulePrefix = tf::getFullCurrentModuleName();
+#endif
+#if TF_REGISTER_ALL
+        registered_ = instances_register_;
+        if (registered_)
+        {
+            instances_.insert(this);
+            fieldCArray.push_back(this);
+        }
+#endif
+    }
+
+    /**
+    	@attention the functionality has to be implemented in TraceableField not here
+    */
+    inline TraceableFieldBase(TraceableFieldBase && move) : name_(0),vcd(0),flags_(0),modulePrefix(0),arrayInfo(0)
+    {
+#ifdef MODULENAMEEXTENSION_H_INCLUDED
+		if (tf::moduleNamePresent)
+			modulePrefix = tf::getFullCurrentModuleName();
+#endif
+#if TF_REGISTER_ALL
+        registered_ = instances_register_;
+        if (registered_)
+        {
+            instances_.insert(this);
+            fieldCArray.push_back(this);
+        }
+#endif
+    }
+
+public:
+
+    inline virtual ~TraceableFieldBase()
+    {
+#if TF_REGISTER_ALL
+        if (registered_)
+        {
+            instances_.erase(this);
+            for (auto iter = fieldCArray.begin(); iter != fieldCArray.end(); ++iter)
+            {
+                if (*iter == this)
+                {
+                    fieldCArray.erase(iter);
+                    break; // can only exist once in that list
+                }
+            }
+        }
+#endif
+        if (unlikely(arrayInfo))
+            delete arrayInfo;
+    }
+
+    /**
+    	@attention the passed name pointer will be used by this class and it will not be cleaned up
+    */
+    inline void setName(const char * name) const
+    {
+        name_ = name;
+    }
+    /**
+        returns the name or "" if not set.
+        @return a valid pointer to a char array string
+    */
+    inline const char * getName() const
+    {
+        return name_?name_:"";
+    }
+    /**
+        returns the module prefix + name if available.
+        @attention don't use in performance critical parts
+    */
+	inline std::string getFullName() const{
+		std::string ret;
+		if (modulePrefix)
+			ret = modulePrefix;
+		ret = ret + getName();
+		return ret;
+	}
+
+    /**
+    	@brief adds an error to a TraceableField. writes an error message if error bits beyond the length of the value variable are set
+    */
+    virtual bool addError(uint64_t error,unsigned * errorid) const =0;
+
+    /**
+        changed the undefined bit mask. passed values will be ignored if the tf::flags::ALWAYSDEFINED flag is set
+    */
+    virtual void setUDefMasks(uint64_t,uint64_t) = 0;
+    /**
+        returns the mask of undefined bits
+    */
+    virtual std::pair<uint64_t,uint64_t> getUDefMasks() = 0;
+
+    /**
+        returns the current values (val,errval) of a TraceableField.
+    */
+    virtual std::pair<uint64_t,uint64_t> getValues() = 0;
+
+    /**
+        sets the current values (val,errval) of a TraceableField. additional bits will be discarded
+    */
+    virtual void setValues(uint64_t,uint64_t) = 0;
+
+protected:
+
+    /**
+    	@attention the functionality has to be implemented in TraceableField not here
+    */
+    inline TraceableFieldBase& operator=(const TraceableFieldBase & cpy)
+    {
+        return *this;
+    }
+
+    /**
+    	@attention the functionality  has to be implemented in TraceableField not here
+    */
+    inline TraceableFieldBase& operator=(TraceableFieldBase && cpy)
+    {
+        return *this;
+    };
+
+public:
+
+
+private:
+
+public:
+    /**
+        all registered instances.
+        @attention not threadsafe (but read only access should be fine: e.g. instantiate fields -> disable registration -> start threads -> stop threads -> destroy fields)
+    */
+    static std::set<TraceableFieldBase*> instances_;
+    /**
+        if true then new TraceableField instances will append theire pointer to instances_ and fieldCArray.
+        @attention if true the applyName() need to be called after instantiation; either manually or by using TraceableField_register()
+    */
+    static bool instances_register_;
+
+    /**
+        internal structure used to map names to TraceableField instances
+    */
+    static std::vector<TraceableFieldBase*> fieldCArray;
+    /**
+        maps the given name to TraceableFields in the fieldCArray.
+
+        in case of arrays the name must match the syntax of the array declaration:
+        \code
+tf::TraceableFieldBase::instances_register_ = true;
+TraceableField<int> array[2][5];
+applyName("pretty_array_name[2][5]",0);
+tf::TraceableFieldBase::instances_register_ = false;
+        \endcode
+
+        or
+
+        \code
+class Module{
+public:
+    TraceableField<int> array[2][5];
+    TraceableField_register("pretty_array_name[2][5]",0); //NOTE: there may not be another field in between this and the previous declaration.
+
+};
+int main(int,char**){
+    tf::TraceableFieldBase::instances_register_ = true;
+    Module module;
+    tf::TraceableFieldBase::instances_register_ = false;
+}
+        \endcode
+
+    */
+    static void applyName(const char * name,decltype(tf::flags::ISOUT) flags);
+
+};
+
+
+class TraceableFieldField : public etiss::VirtualStruct::Field {
+public:
+    TraceableFieldField(etiss::VirtualStruct & parent,TraceableFieldBase & field,bool private_);
+protected:
+    virtual uint64_t _read();
+    virtual void _write(uint64_t);
+public:
+    TraceableFieldBase & field;
+};
+
+
+}
+
+#endif // TRACEABLEFIELDBASE_H_INCLUDED

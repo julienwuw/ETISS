@@ -1,0 +1,67 @@
+This example contains a SystemC wrapper interface for processors in general (cpu_systemc_interface_lib) and an implementation of that interface for ETISS (cpu_systemc_etiss_lib).
+Other files show how ETISS with the SystemCInterface can be used. main.cpp initializes etiss, loads an image to a simulated memory (SimpleMemory) and runs a simulation. The OR1k processor architecture is used in this example. If that plugin is not available then another binary image+processor architecture must be used.
+
+1. Check that path to SystemC is correctly set in the Makefile
+
+2. To compile and run the example type:
+$ make
+$ make run
+
+
+The output of the example program should look like this:
+
+				     SystemC 2.3.0-ASI --- Apr 16 2014 16:50:42
+				Copyright (c) 1996-2012 by all Contributors,
+				ALL RIGHTS RESERVED
+
+		mkdir: cannot create directory `/home/gu74ret/.etiss/0.4/': File exists
+		ETISS: Error: etiss::Configuration::get<bool>: regex_error
+		ETISS: Warning: failed to load symbol OR1KArch_getFileSize: /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/MarcGreim/ETISS/trunk/install5/installed/lib/plugins/libOR1KArch.so: undefined symbol: OR1KArch_getFileSize[secondary: /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/MarcGreim/ETISS/trunk/install5/installed/lib/plugins/libOR1KArch.so: undefined symbol: getFileSize]
+		ETISS: Warning: failed to load symbol LLVMJIT_getFileSize: /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/MarcGreim/ETISS/trunk/install5/installed/lib/plugins/libLLVMJIT.so: undefined symbol: LLVMJIT_getFileSize[secondary: /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/MarcGreim/ETISS/trunk/install5/installed/lib/plugins/libLLVMJIT.so: undefined symbol: getFileSize]
+		updated irq2: 0
+		main called
+		main called
+		0x00000001
+		0x00000002
+		0x00000004
+		0x00000008
+		0x00000010
+		0x00000020
+		0x00000040
+		0x00000080
+		0x00000100
+		0x00000200
+		0x00000400
+		0x00000800
+		0x00001000
+		0x00002000
+		pi 1: 3.1415927410
+
+		[]
+
+NOTE: ETISS might print out some warnings or errors but those shown above are not an issue.
+
+"main called" is shown twice if the reset signal works correctly. 
+Without reset "main called" should be printed only once.
+
+The simulated software printed via the logger insterface:
+		main called
+		main called
+		0x00000001
+		0x00000002
+		0x00000004
+		0x00000008
+		0x00000010
+		0x00000020
+		0x00000040
+		0x00000080
+		0x00000100
+		0x00000200
+		0x00000400
+		0x00000800
+		0x00001000
+		0x00002000
+		pi 1: 3.1415927410
+other text originates from the simulator itself
+
+

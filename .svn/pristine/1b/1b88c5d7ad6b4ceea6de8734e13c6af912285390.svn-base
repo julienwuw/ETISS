@@ -1,0 +1,373 @@
+/**
+
+@copyright
+<pre>
+
+
+	Copyright (c) 2014 Institute for Electronic Design Automation, TU Munich
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+
+
+</pre>
+@author Marc Greim <marc.greim@mytum.de>
+
+@date July 29, 2014
+
+@version 0.1
+
+*/
+/**
+	@file
+
+	@brief
+
+	@detail
+
+
+
+
+*/
+
+
+#include <map>
+#include <iostream>
+#include <memory>
+
+#include "etiss/ETISS.h"
+#include "etiss/DebugSystem.h"
+
+#include "etiss/fault/Stressor.h"
+
+#include "etiss/IntegratedLibrary/VariableValueLogger.h"
+#include "etiss/IntegratedLibrary/InstructionAccurateCallback.h"
+
+#include <cstring>
+
+#include <sstream>
+
+using namespace etiss;
+
+
+#include "etiss/Instruction.h"
+
+#include <ctime>
+
+#include "etiss/IntegratedLibrary/PreInstructionManipulationCallback.h"
+
+class Callback : public etiss::plugin::PreInstructionManipulationCallback
+{
+public:
+	virtual void callback(){
+		plugin_core_->getStruct()->instructionAccurateCallback(plugin_cpu_->cpuTime_ps);
+	}
+};
+
+class EXIT_ON_INFLOOP : public etiss::TranslationPlugin {
+public:
+
+	virtual void finalizeInstrSet(etiss::instr::ModedInstructionSet & mis) const{
+
+		mis.foreach([](etiss::instr::VariableInstructionSet & vis){
+			vis.foreach([](etiss::instr::InstructionSet & is){
+				is.foreach([](etiss::instr::Instruction & i){
+					if (i.name_.find("nop") != std::string::npos){
+						i.addCallback([](etiss::instr::BitArray & ba,etiss::CodeSet & cs,etiss::instr::InstructionContext &){
+							etiss::instr::BitArrayRange bar(31,0);
+							if (!bar.read(ba)){
+								cs.append(etiss::CodePart::PREINITIALDEBUGRETURNING).code() = "return ETISS_RETURNCODE_CPUFINISHED;";
+							}
+							return true;
+						},0);
+					}
+				});
+			});
+		});
+
+	}
+
+	virtual std::string _getPluginName() const{
+		return "EXIT_ON_INFLOOP";
+	}
+
+};
+
+int main( int argc, const char* argv[] ) {
+{
+
+	std::string branch = argv[1];
+	std::string iteration = argv[2];
+	etiss::cfg().set<std::string>("branch",branch);
+	etiss::cfg().set<std::string>("iteration",iteration);
+	etiss::cfg().set<std::string>("resultpath",std::string("./faults/results/")+branch+"/");
+	std::string fault_xml = std::string("./faults/") +branch + "/faults" + iteration +".xml";
+	std::string results = std::string("./faults/results/") +branch + "/state" + iteration;
+	argv[2] = argv[0];
+	etiss::Initializer initializer(argc-2,argv+2,"-fno-sigint-console");
+
+	etiss::loadLibrary("/tmp/","Verilator");
+
+	// create memory device
+	DebugSystem dsys;
+	// load image to memory
+	dsys.load(0,"../SW/test3/code.bin");
+
+	// can be used to write a small assembler programm beginning at address 0
+
+	if (false){
+		std::list<etiss::uint32> instructions;
+
+		{
+			instructions.push_back(0x15000001);
+			/*
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0x03FFFFCE);
+			instructions.push_back(0xAC210814);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210801);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0xE0210800);
+			instructions.push_back(0x00000002);
+			instructions.push_back(0xE0200803);
+			instructions.push_back(0x03FFFFF6);
+			instructions.push_back(0xE0200803);
+			*/
+		}
+
+		unsigned pos = 0;
+		for (std::list<etiss::uint32>::iterator iter = instructions.begin();iter != instructions.end();iter++){
+			etiss::uint8 buf[4];
+			buf[0] = *iter>>24;
+			buf[1] = *iter>>16;
+			buf[2] = *iter>>8;
+			buf[3] = *iter;
+			dsys.dbg_write(pos,buf,4);
+			pos += 4;
+		}
+	}
+
+
+	//dsys.swapEndian(4);
+	std::map<std::string,std::string> options;
+
+	options.clear();
+	//options["ignore_sr_iee"] = "true";
+	//options["norangeexception"] = "true"; // or1k arch will not check for range exceptions
+	//options["returnjump"] = "true"; // or1k arch will no terminate a block after a jump
+	//options["hostendianness"] = "true";
+	std::shared_ptr<etiss::CPUCore> cpu = etiss::CPUCore::create("or1k","core0",options);
+
+	if (!cpu){
+		etiss::log(etiss::ERROR,"failed to create cpu core");
+		return -1;
+	}
+
+	VirtualStruct::root()->mountStruct("core0",cpu->getStruct());
+
+	cpu->set(getJIT("TCCJIT"));
+
+	etiss::uint64 sa = 0;
+
+	//cpu->reset(&sa);
+
+
+
+	options.clear();
+	//cpu->addPlugin(etiss::getPlugin("PrintInstruction",options));	// a plugin that print the instruction and its address when it is executed
+
+	options.clear();
+	options["port"] = "2222"; // define port (default: 2222)
+	//cpu->addPlugin(etiss::getPlugin("gdbserver",options)); // adds a gdb debug server (connect with "target remote localhost:2222")
+
+	options.clear();
+	options["logaddr"] = "0x80000000";
+	options["logmask"] = "0xF0000000";
+	cpu->addPlugin(etiss::getPlugin("Logger",options));
+
+
+	options.clear();
+	//options["-rR5"] = "./fail_set_00000";
+	//options["-rR6"] = "./fail_set_00000";
+	//options["-rR7"] = "./fail_set_00000";
+	//options["-rR8"] = "./fail_set_00000";
+	//options["-rR10"] = "./fail_set_00000";
+	//options["-rR14"] = "./fail_set_00000";
+	//options["-rR15"] = "./fail_set_00000";
+	//options["-rR16"] = "./fail_set_00000";
+	//options["-rR17"] = "./fail_set_00000";
+	//options["-rR18"] = "./fail_set_00000";
+	//options["-rR19"] = "./fail_set_00000";
+	//options["-rR20"] = "./fail_set_00000";
+
+	//cpu->addPlugin(etiss::getPlugin("BlockAccurateHandler",options)); // injects errors after an block into registers
+
+	//cpu->addPlugin(std::shared_ptr<Plugin>(new Callback()));
+
+	options.clear();
+	options["ifStallCycles"] = "2";
+	cpu->addPlugin(etiss::getPlugin("or1200::datasheettiming",options));
+
+    //cpu->addPlugin(etiss::getPlugin("or1ksimcpu"));
+
+    //cpu->addPlugin(etiss::getPlugin("QEMUCPU"));
+
+	cpu->addPlugin(etiss::getPlugin("OR1KVCPU"));
+	//cpu->addPlugin(std::shared_ptr<etiss::Plugin>(new EXIT_ON_INFLOOP()));
+
+    if (etiss::cfg().get<bool>("executiontrace",false)){
+        std::map<uint64_t,unsigned> pcount;
+        std::shared_ptr<etiss::plugin::VariableValueLogger> vvl(new etiss::plugin::VariableValueLogger("instructionPointer","pc_trace.txt",[pcount](std::ostream & out,const std::string & field,uint64_t val) mutable {
+                unsigned & count = pcount[val];
+                count++;
+                out << "<trigger type=\"META_COUNTER\"><count>"<<count<<"</count><trigger type=\"VARIABLEVALUE\"><injector>core0</injector><field>"<<field<<"</field><value>"<<val<<"</value></trigger></trigger>\n";
+            }));
+
+        cpu->addPlugin(vvl);
+
+    }
+
+    if (false){
+    	etiss::plugin::InstructionAccurateCallback * iac = new etiss::plugin::InstructionAccurateCallback();
+    	cpu->addPlugin(std::shared_ptr<etiss::Plugin>(iac));
+    } else
+    {
+    	Callback * cb = new Callback();
+    	cpu->addPlugin(std::shared_ptr<etiss::Plugin>(cb));
+
+    	cpu->getStruct()->acceleratedTrigger_ = [cb](const etiss::fault::Trigger & t,int32_t id){
+    		cb->addCallbackAddress(t.getTriggerFieldValue());
+    		std::cout << "\n\nadded callback at 0x" << std::hex << t.getTriggerFieldValue() << std::endl;
+    		return false;
+    	};
+    }
+
+    etiss::fault::Stressor::loadXML(fault_xml); // IMPORTANT LOAD XML AFTER EVERYTHING HAS BEEN INITIALIZED
+	
+	double start = (double)clock()/CLOCKS_PER_SEC;
+    etiss_int32 exception = cpu->execute(dsys);
+	double end = (double)clock()/CLOCKS_PER_SEC;
+
+	{
+		std::ofstream out;
+		std::string timeresult = results+"_time";
+		out.open(timeresult.c_str());
+		out << end-start;
+		out.flush();
+		out.close();
+	}
+
+    {
+		std::ofstream out;
+		out.open(results.c_str());
+		for (int i = 0;i<32;++i){
+			std::stringstream ss;
+			ss << "R" << i << "";
+			out << cpu->getStruct()->findName(ss.str())->read() << "\n";
+		}
+		out << "SPR:\n";
+		out << (cpu->getStruct()->findName("SPR[0][17]")->read()|(1<<15)) << "\n";
+		out << cpu->getStruct()->findName("SPR[0][32]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][48]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][64]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][0]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][1]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][2]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][3]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][4]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][5]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][6]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][7]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[0][20]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[9][0]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[9][2]")->read() << "\n";
+		out << cpu->getStruct()->findName("SPR[10][0]")->read() << "\n";
+		
+
+		out.flush();
+		out.close();
+	}
+
+	if (exception != 0)
+		std::cout << "CPU exited with exception: 0x" <<std::hex << exception << std::dec << ": " << etiss::RETURNCODE::getErrorMessages()[exception] << std::endl;
+
+	cpu.reset(); // delete cpu
+	//quick_exit( 0 );
+}
+
+	
+
+}
+
+

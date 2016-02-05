@@ -1,0 +1,70 @@
+section sim
+	clkcycle = 10ns
+end
+section cpu
+	upr = 0x00000601
+end
+section dmmu
+	enabled = 0
+end
+section immu
+	enabled = 0
+end
+section dc
+	enabled = 0
+end
+section ic
+	enabled = 0
+end
+section pic
+	enabled = 1
+end
+section pm
+	enabled = 0
+end
+section bpb
+	enabled = 0
+end
+section debug
+	enabled = 0
+end
+section uart
+	enabled = 0
+end
+section dma
+	enabled = 0
+end
+section ethernet
+	enabled = 0
+end
+section gpio
+	enabled = 0
+end
+section vga
+	enabled = 0
+end
+section kbd
+	enabled = 0
+end
+section ata
+	enabled = 0
+end
+section generic
+	name = "ETISS_System1"
+	baseaddr = 0x00000000
+	size = 0x7FFFFFFF
+end
+section generic
+	name = "ETISS_System2"
+	baseaddr = 0x80000000
+	size = 0x7FFFFFFF
+end
+section memory
+	pattern = 0x00
+	type = unknown
+	name = "no memory"
+	baseaddr = 0x00000000
+	size = 0x00000000
+	delayr = 0
+	delayw = 0
+end

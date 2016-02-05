@@ -1,0 +1,51 @@
+#define ETISS_LIBNAME QEMU
+#define ETISS_EXPORT
+#include "etiss/helper/PluginLibrary.h"
+#include "etiss/Misc.h"
+
+
+#include "qemucpu.h"
+#include "IncludedFiles.h"
+
+extern "C" {
+	ETISS_LIBRARYIF_VERSION_FUNC_IMPL
+	unsigned QEMU_countPlugin(){
+		return 1; ///TODO set number of provided etiss::Plugin implementations
+	}
+	const char * QEMU_namePlugin(unsigned index){
+		switch (index){ ///TODO return name of a etiss::Plugin implementation at the given index
+		case 0:
+            return "QEMUCPU";
+		default:
+			return "";
+		}
+	}
+	etiss::Plugin * QEMU_createPlugin(unsigned index,std::map<std::string,std::string> options){
+		etiss::Configuration config; config.config() = options; // load the options into a config object for easy access
+		switch (index){ ///TODO return a new instance of a etiss::Plugin implementation at the given index
+		case 0:
+			return new qemucpu();
+		default:
+			return 0;
+		}
+	}
+	void QEMU_deletePlugin(etiss::Plugin * ptr){
+		delete ptr; ///TODO check if this works, but in most cases there should be no problem
+	}
+
+
+	unsigned QEMU_getFileCount(){
+		return count; ///TODO set number file required to be copied
+	}
+	const char * QEMU_getFileName(unsigned index){
+		return names[index];
+	}
+	const char * QEMU_getFileData(unsigned index){
+		return data[index];
+	}
+	int QEMU_getFileSize(int index){
+		return data_size[index];
+	}
+
+
+} // extern C

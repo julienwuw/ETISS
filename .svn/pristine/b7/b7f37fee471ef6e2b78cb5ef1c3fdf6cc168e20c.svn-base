@@ -1,0 +1,289 @@
+
+
+#include "TraceableField.h"
+
+
+/*
+TraceableFieldBase::TraceableFieldBase(const char * const_name): const_name_(const_name!=0?const_name:""),name_(),name_valid_(false),auto_name_(true),registered_(false){
+
+}
+
+TraceableFieldBase::TraceableFieldBase(const TraceableFieldBase & cpy){
+
+}
+
+TraceableFieldBase::~TraceableFieldBase(){
+
+}
+*/
+
+std::set<tf::TraceableFieldBase*> tf::TraceableFieldBase::instances_;
+bool tf::TraceableFieldBase::instances_register_ = false;
+
+std::vector<tf::TraceableFieldBase*> tf::TraceableFieldBase::fieldCArray;
+
+static std::set<std::string> tfNames; // used to store field names to supply pointers to char arrays
+
+
+static void initializeName_rec(std::vector<size_t> & awv,std::vector<size_t> &awv_s,std::vector<size_t> & currentAddr,std::string prefix,size_t pos,size_t & CArrayIndex,decltype(tf::flags::ISOUT) flags){
+
+    currentAddr.push_back(0);
+    size_t & i = currentAddr.back();
+	if (pos+1 == awv.size()){
+		for (i = 0;i<awv[pos];i++){
+			std::stringstream ss;
+			ss << prefix << i;
+			if (CArrayIndex>=tf::TraceableFieldBase::fieldCArray.size()){
+				CArrayIndex++; // error message?
+			} else {
+				tfNames.insert(ss.str());
+				tf::TraceableFieldBase::fieldCArray[CArrayIndex]->setName((*tfNames.find(ss.str())).c_str());
+				tf::TraceableFieldBase::fieldCArray[CArrayIndex]->flags(tf::TraceableFieldBase::fieldCArray[CArrayIndex]->flags() | flags);
+				tf::TraceableFieldBase::ArrayInfo * ai = new tf::TraceableFieldBase::ArrayInfo();
+				ai->position = currentAddr;
+				ai->size = awv;
+				tf::TraceableFieldBase::fieldCArray[CArrayIndex]->arrayInfo = ai;
+				CArrayIndex++;
+			}
+		}
+	} else {
+		for (i = 0;i<awv[pos];i++){
+	 		std::stringstream ss;
+	 		if (pos==0)
+	 			ss << "_";
+	 		ss << prefix;
+	 		ss << i;
+	 		ss << "_";
+	 		std::string lpref = ss.str();
+	 		initializeName_rec(awv,awv_s,currentAddr,lpref,pos+1,CArrayIndex,flags);
+	 	}
+	}
+
+
+}
+
+static const char * uniqueLocalName(const char * modulename,const char * name){
+	static std::set<std::string> usedFieldBaseNames; // used to store base names to resolve name collisions
+	std::string ret;
+	std::string full;
+	unsigned index = 0;
+	do {
+		std::stringstream ss;
+		if (index > 0)
+			ss << "(" << index << ")";
+		ss << name;
+		ret = ss.str();
+
+		ss.str("");
+ 		if (modulename)
+			ss << modulename;
+		ss << ret;
+		full = ss.str();
+	}while (usedFieldBaseNames.find(full) != usedFieldBaseNames.end());
+
+	usedFieldBaseNames.insert(full);
+
+	if (tfNames.find(ret) == tfNames.end()){
+		tfNames.insert(ret);
+	}
+
+	return tfNames.find(ret)->c_str();
+
+}
+
+void tf::TraceableFieldBase::applyName(const char * cname,decltype(tf::flags::ISOUT) flags){
+
+	//std::cout << "Adding: " << cname << std::endl;
+	if (fieldCArray.size() == 0){
+		std::cout << "TraceableFieldBase::applyName called while no TraceableField has been registert for this name: " << cname << std::endl;
+		return;
+	}
+
+	if (fieldCArray.size() == 1){ // handle single instances faster
+
+
+		fieldCArray[0]->setName(uniqueLocalName(fieldCArray[0]->modulePrefix,cname)); // cname is valid due to the use of the TraceableField_register macro
+
+		fieldCArray[0]->flags(fieldCArray[0]->flags() | flags);
+
+		//std::cout << "Added field: " << cname << std::endl;
+
+		fieldCArray.clear();
+
+		return;
+	}
+
+
+	// verify object order in memory (for arrays)
+	size_t pointervalue = 0;
+	for (size_t i = 0;i<fieldCArray.size();i++){
+		if ((size_t) fieldCArray[i] < pointervalue){
+			std::cout << "Warning: invalid field pointer order detected" << std::endl;
+		}
+		pointervalue = (size_t) fieldCArray[i];
+	}
+
+	std::vector<size_t> awv; // array dimension length vector
+	std::vector<size_t> awv_s; // store the total size of sub array with lower dimension (=total size of current entry)
+
+
+	std::string name = cname;
+
+	{
+		std::string aws = name;
+		{
+			size_t start = aws.find('[');
+			if (start != std::string::npos)
+				name = name.substr(0,start);
+			while (start != std::string::npos){
+				size_t end = aws.find(']');
+				if (end == std::string::npos){ // no matchin ]
+					std::cout << "error (end == std::string::npos): invalid syntax?"<<std::endl;
+				}
+				if (end-start<1){ // empty []
+					std::cout << "error (end-start<1): invalid syntax?"<<std::endl;
+				}
+				// extract value between []
+				std::stringstream ss(aws.substr(start+1,end-start-1));
+				unsigned len = 0;
+				ss >> len;
+				// check for conversion errors
+				if (ss.fail()){
+					std::cout << "error (parse value): invalid syntax?"<<std::endl;
+				}
+				awv.push_back(len); // store length
+				aws = aws.substr(end+1,std::string::npos); // reset for next dimension
+				start = aws.find('[');
+			}
+		}
+
+	}
+
+
+	const char * uname = uniqueLocalName(fieldCArray[fieldCArray.size()-1]->modulePrefix,name.c_str());
+
+	awv_s.insert(awv_s.begin(),1);
+
+	if (awv.size() == 0){ // not an array but there are additional elements present
+		if (fieldCArray.size() > 1){
+			TraceableFieldBase * tmp = fieldCArray[fieldCArray.size()-1];
+			fieldCArray.clear();
+			fieldCArray.push_back(tmp);
+			std::cout << "Removed additional unnamed TraceableFields from list after applying name: "<< cname<<std::endl;
+		}
+
+		fieldCArray[0]->setName(uname);
+		fieldCArray[0]->flags(fieldCArray[0]->flags() | flags);
+		fieldCArray.clear();
+
+		return;
+	}
+
+	for (int64_t i = (awv.size()-1);i>=0;i--){ //calculate total child array element count
+
+		unsigned v = awv_s.front();
+		v = v * awv[(unsigned)i];
+		awv_s.insert(awv_s.begin(),v);
+
+	}
+
+	if (awv_s[0] != fieldCArray.size()){
+		std::cout << "parsed array size and available elements don't match. (" << awv_s[0] << "," << fieldCArray.size() << ")"<<std::endl;
+	}
+    std::vector<size_t> currentAddr;
+	size_t caind = 0; // array depth level
+	initializeName_rec(awv,awv_s,currentAddr,uname,0,caind,flags); // traverse through array indices to assign the right name to each TraceableField
+
+	//std::cout << "Added array: " << cname << std::endl;
+
+	fieldCArray.clear();
+}
+
+tf::TraceableFieldField::TraceableFieldField(etiss::VirtualStruct & parent,tf::TraceableFieldBase & field,bool private_) :
+    Field(parent,field.getFullName(),field.getFullName(),R|W|F|(private_?P:0),field.width_),
+    field(field)
+{
+
+}
+uint64_t tf::TraceableFieldField::_read(){
+    return field.getValues().second;
+}
+void tf::TraceableFieldField::_write(uint64_t v){
+    field.setValues(v,v);
+}
+
+#ifdef ETISS_INTERFACES_DOT_H
+static std::list<std::string> tf_write_getLabels(const void * ptr){
+	tf::TraceableFieldBase * tfb = (tf::TraceableFieldBase*) ptr;
+	std::string name = tfb->getFullName();
+	auto split = [](const std::string & str,size_t from,size_t & seplen){
+		size_t f1 = str.find(".",from);
+		size_t f2 = str.find("::",from);
+		seplen = f1<f2?1:2;
+		return f1<f2?f1:f2;
+	};
+	return etiss::split(name,split);
+}
+static std::string tf_write_getcolor(const void * ptr){
+	tf::TraceableFieldBase * tfb = (tf::TraceableFieldBase*) ptr;
+	bool in = ((tf::TraceableFieldBase*)tfb)->flags()&tf::flags::ISIN;
+	bool out = ((tf::TraceableFieldBase*)tfb)->flags()&tf::flags::ISOUT;
+	if (in && out){
+		return "yellow";
+	}
+	else if (in)
+	{
+		return "blue";
+	}
+	else if (out)
+	{
+		return "green";
+	}
+	else
+	{
+		return "orange";
+	}
+}
+static std::string tf_write_getlcolor(const void * src,const void * dst){
+	tf::TraceableFieldBase * tfb = (tf::TraceableFieldBase*) src;
+	return (tfb->getUDefMasks().first || tfb->getUDefMasks().second)?"red":"green";
+}
+void etiss::interfaces::dot::VariableDependencyGraph::tf_write(const std::string & filename){
+
+
+	etiss::interfaces::Dot dot;
+
+	std::set<const void *> known;
+
+	for (auto iter = deps_.begin();iter != deps_.end();++iter){
+		etiss::interfaces::Dot::Node * src = dot.lopenN(tf_write_getLabels(iter->first));
+		etiss::interfaces::Dot::Node * dst = dot.lopenN(tf_write_getLabels(iter->second));
+		if (known.find(iter->first)==known.end()){
+			src->color_ = tf_write_getcolor(iter->first);
+		}
+		if (known.find(iter->second)==known.end()){
+			dst->color_ = tf_write_getcolor(iter->second);
+		}
+
+		etiss::interfaces::Dot::Link * link = dot.createE(src,dst);
+		link->color_ = tf_write_getlcolor(iter->first,iter->second);
+	}
+
+	std::ofstream out;
+	out.open(filename.c_str());
+	if (!out.is_open()){
+		etiss::log(etiss::ERROR,"failed to open file ",filename);
+		return;
+	}
+
+	dot.print(out);
+
+	out.flush();
+	out.close();
+
+
+}
+#endif
+
+
+

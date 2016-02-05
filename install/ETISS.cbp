@@ -1,0 +1,893 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ETISS" />
+		<Option makefile_is_custom="1" />
+		<Option default_target="main" />
+		<Option compiler="gcc" />
+		<Option virtualFolders="CMake Files/;CMake Files/ArchImpl/;CMake Files/ArchImpl/ARMv6M/;CMake Files/ArchImpl/OR1K/;CMake Files/include/;CMake Files/include/etiss/;CMake Files/include/etiss/interfaces/;CMake Files/include/etiss/fpu/;CMake Files/include/etiss/IntegratedLibrary/;CMake Files/include/etiss/IntegratedLibrary/fault/;CMake Files/include/etiss/IntegratedLibrary/errorInjection/;CMake Files/include/etiss/IntegratedLibrary/gdb/;CMake Files/include/etiss/helper/;CMake Files/include/etiss/dox/;CMake Files/include/etiss/fault/;CMake Files/include/etiss/fault/xml/;CMake Files/src/;CMake Files/src/interfaces/;CMake Files/src/fpu/;CMake Files/src/IntegratedLibrary/;CMake Files/src/IntegratedLibrary/fault/;CMake Files/src/IntegratedLibrary/errorInjection/;CMake Files/src/IntegratedLibrary/gdb/;CMake Files/src/fault/;CMake Files/src/fault/xml/;CMake Files/include_c/;CMake Files/include_c/etiss/;CMake Files/include_c/etiss/jit/;CMake Files/include_c/etiss/jit/fpu/;CMake Files/projects/;CMake Files/JITImpl/;CMake Files/JITImpl/TCC/;CMake Files/JITImpl/LLVM/;CMake Files/JITImpl/GCC/;CMake Files/PluginImpl/;CMake Files/examples/;CMake Files/examples/systemc/;CMake Files/examples/SW/;CMake Files/examples/bare_etiss_processor/;CMake Files/systemc/;" />
+		<Build>
+			<Target title="all">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 all' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ETISS">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/libETISS.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 ETISS' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ETISS/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/libETISS.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 ETISS/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ETISS_PLUGIN">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/libETISS_PLUGIN.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 ETISS_PLUGIN' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ETISS_PLUGIN/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/libETISS_PLUGIN.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 ETISS_PLUGIN/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="IncludedFilesGenerator">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/IncludedFilesGenerator" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 IncludedFilesGenerator' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="IncludedFilesGenerator/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/IncludedFilesGenerator" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 IncludedFilesGenerator/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="doc">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 doc' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="install">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 install' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="install/local">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 install/local' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="install/strip">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 install/strip' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="list_install_components">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 list_install_components' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="main">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/main" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="-fno-cleanup" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 main' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="main/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/main" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 main/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 rebuild_cache' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="OR1KArch">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/libOR1KArch.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/ArchImpl/OR1K/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 OR1KArch' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="OR1KArch/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/libOR1KArch.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/ArchImpl/OR1K/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 OR1KArch/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/OR1K/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ARMv6M">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/libARMv6M.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/ArchImpl/ARMv6M/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 ARMv6M' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="ARMv6M/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/libARMv6M.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/ArchImpl/ARMv6M/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 ARMv6M/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/ArchImpl/ARMv6M/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="TCCJIT">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/libTCCJIT.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/JITImpl/TCC/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 TCCJIT' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="TCCJIT/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/libTCCJIT.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/JITImpl/TCC/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 TCCJIT/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="LLVMJIT_make">
+				<Option type="4" />
+				<Option compiler="gcc" />
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 LLVMJIT_make' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="LLVMJIT_make_genheader">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/libLLVMJIT_make_genheader.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 LLVMJIT_make_genheader' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="LLVMJIT_make_genheader/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/libLLVMJIT_make_genheader.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 LLVMJIT_make_genheader/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/LLVM/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="GCCJIT">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/libGCCJIT.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/JITImpl/GCC/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 GCCJIT' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="GCCJIT/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/libGCCJIT.so" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC" />
+				<Option object_output="./" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/JITImpl/GCC/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 GCCJIT/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/GCC/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="main_sc">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/main_sc" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add option="-DSC_INCLUDE_DYNAMIC_PROCESSES" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc/cpu_systemc_etiss_lib" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc/cpu_systemc_interface_lib" />
+					<Add directory="/usr/local/research/projects/SystemDesign/tools/systemc/systemc-2.3.0/include" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 main_sc' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+			<Target title="main_sc/fast">
+				<Option output="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/main_sc" prefix_auto="0" extension_auto="0" />
+				<Option working_dir="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc" />
+				<Option object_output="./" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-DETISS_DEBUG=0" />
+					<Add option="-DSC_INCLUDE_DYNAMIC_PROCESSES" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/include_c" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc/cpu_systemc_etiss_lib" />
+					<Add directory="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/systemc/cpu_systemc_interface_lib" />
+					<Add directory="/usr/local/research/projects/SystemDesign/tools/systemc/systemc-2.3.0/include" />
+				</Compiler>
+				<MakeCommands>
+					<Build command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 main_sc/fast' />
+					<CompileFile command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 &quot;$file&quot;' />
+					<Clean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 clean' />
+					<DistClean command='/usr/bin/gmake -f &quot;/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/systemc/Makefile&quot;  VERBOSE=1 clean' />
+					<AskRebuildNeeded command="$make -q -f $makefile $target" />
+					<SilentBuild command="$make -s -f $makefile $target" />
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="../ArchImpl/ARMv6M/ARMv6M.h" />
+		<Unit filename="../ArchImpl/ARMv6M/ARMv6MArch.cpp" />
+		<Unit filename="../ArchImpl/ARMv6M/ARMv6MArch.h" />
+		<Unit filename="../ArchImpl/ARMv6M/ARMv6MArchLib.cpp" />
+		<Unit filename="../ArchImpl/ARMv6M/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/ArchImpl/ARMv6M/" />
+		</Unit>
+		<Unit filename="../ArchImpl/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/ArchImpl/" />
+		</Unit>
+		<Unit filename="../ArchImpl/OR1K/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/ArchImpl/OR1K/" />
+		</Unit>
+		<Unit filename="../ArchImpl/OR1K/OR1200Timing.cpp" />
+		<Unit filename="../ArchImpl/OR1K/OR1K.h" />
+		<Unit filename="../ArchImpl/OR1K/OR1KArch.cpp" />
+		<Unit filename="../ArchImpl/OR1K/OR1KArch.h" />
+		<Unit filename="../ArchImpl/OR1K/OR1KArch_fpu.cpp" />
+		<Unit filename="../ArchImpl/OR1K/OR1KGDBCore.cpp" />
+		<Unit filename="../ArchImpl/OR1K/OR1KGDBCore.h" />
+		<Unit filename="../ArchImpl/OR1K/OR1KTimer.cpp" />
+		<Unit filename="../ArchImpl/OR1K/OR1KTimer.h" />
+		<Unit filename="../ArchImpl/OR1K/OR1K_Helper.cpp" />
+		<Unit filename="../ArchImpl/OR1K/ORBIS32_I.cpp" />
+		<Unit filename="../ArchImpl/OR1K/ORBIS32_II.cpp" />
+		<Unit filename="../ArchImpl/OR1K/ORFPX32.cpp" />
+		<Unit filename="../CMakeLists.txt">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../CMakeLists.txt.project.template">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../Doxyfile.in">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../ETISS.mk.in">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../ETISSCMakeFunctions.cmake">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../ETISSConfig.cmake.in">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../ETISSConfigVersion.cmake.in">
+			<Option virtualFolder="CMake Files/" />
+		</Unit>
+		<Unit filename="../IncludedFilesGenerator.cpp" />
+		<Unit filename="../JITImpl/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/JITImpl/" />
+		</Unit>
+		<Unit filename="../JITImpl/GCC/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/JITImpl/GCC/" />
+		</Unit>
+		<Unit filename="../JITImpl/GCC/GCCJIT.cpp" />
+		<Unit filename="../JITImpl/GCC/GCCJIT.h" />
+		<Unit filename="../JITImpl/GCC/GCCJITLIB.cpp" />
+		<Unit filename="../JITImpl/LLVM/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/JITImpl/LLVM/" />
+		</Unit>
+		<Unit filename="../JITImpl/LLVM/Makefile" />
+		<Unit filename="../JITImpl/TCC/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/JITImpl/TCC/" />
+		</Unit>
+		<Unit filename="../JITImpl/TCC/TCCJIT.cpp" />
+		<Unit filename="../JITImpl/TCC/TCCJIT.h" />
+		<Unit filename="../JITImpl/TCC/TCCJITLib.cpp" />
+		<Unit filename="../PluginImpl/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/PluginImpl/" />
+		</Unit>
+		<Unit filename="../examples/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/examples/" />
+		</Unit>
+		<Unit filename="../examples/SW/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/examples/SW/" />
+		</Unit>
+		<Unit filename="../examples/bare_etiss_processor/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/examples/bare_etiss_processor/" />
+		</Unit>
+		<Unit filename="../examples/bare_etiss_processor/CMakeLists.txt.in">
+			<Option virtualFolder="CMake Files/examples/bare_etiss_processor/" />
+		</Unit>
+		<Unit filename="../examples/systemc/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/examples/systemc/" />
+		</Unit>
+		<Unit filename="../examples/systemc/FindSystemC.cmake">
+			<Option virtualFolder="CMake Files/examples/systemc/" />
+		</Unit>
+		<Unit filename="../examples/systemc/Makefile.in">
+			<Option virtualFolder="CMake Files/examples/systemc/" />
+		</Unit>
+		<Unit filename="../include/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/" />
+		</Unit>
+		<Unit filename="../include/etiss/Benchmark.h" />
+		<Unit filename="../include/etiss/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/" />
+		</Unit>
+		<Unit filename="../include/etiss/CPUArch.h" />
+		<Unit filename="../include/etiss/CPUCore.h" />
+		<Unit filename="../include/etiss/ClassDefs.h" />
+		<Unit filename="../include/etiss/CodePart.h" />
+		<Unit filename="../include/etiss/DebugSystem.h" />
+		<Unit filename="../include/etiss/ETISS.h" />
+		<Unit filename="../include/etiss/ErrorDefinition.h" />
+		<Unit filename="../include/etiss/FastMemory.h" />
+		<Unit filename="../include/etiss/FastString.h" />
+		<Unit filename="../include/etiss/FixedSizeHashMap.h" />
+		<Unit filename="../include/etiss/Instruction.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/IntegratedLibrary/" />
+		</Unit>
+		<Unit filename="../include/etiss/IntegratedLibrary/InstructionAccurateCallback.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/Logger.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/MemoryDevice.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/PreInstructionManipulationCallback.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/PrintInstruction.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/VariableValueLogger.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/VirtualStructMemory.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/errorInjection/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/IntegratedLibrary/errorInjection/" />
+		</Unit>
+		<Unit filename="../include/etiss/IntegratedLibrary/errorInjection/Plugin.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/fault/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/IntegratedLibrary/fault/" />
+		</Unit>
+		<Unit filename="../include/etiss/IntegratedLibrary/fault/CPUStateCopyHelper.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/fault/SwitchSystem.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/IntegratedLibrary/gdb/" />
+		</Unit>
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/GDBConnection.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/GDBCore.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/GDBServer.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/Hex.h" />
+		<Unit filename="../include/etiss/IntegratedLibrary/gdb/UnixTCPGDBConnection.h" />
+		<Unit filename="../include/etiss/InterruptHandler.h" />
+		<Unit filename="../include/etiss/InterruptVector.h" />
+		<Unit filename="../include/etiss/JIT.h" />
+		<Unit filename="../include/etiss/LibraryInterface.h" />
+		<Unit filename="../include/etiss/Misc.h" />
+		<Unit filename="../include/etiss/ObjectPool.h" />
+		<Unit filename="../include/etiss/Plugin.h" />
+		<Unit filename="../include/etiss/RefCountedObject.h" />
+		<Unit filename="../include/etiss/System.h" />
+		<Unit filename="../include/etiss/Timing.h" />
+		<Unit filename="../include/etiss/Translation.h" />
+		<Unit filename="../include/etiss/VirtualStruct.h" />
+		<Unit filename="../include/etiss/config.h.in">
+			<Option virtualFolder="CMake Files/include/etiss/" />
+		</Unit>
+		<Unit filename="../include/etiss/dox/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/dox/" />
+		</Unit>
+		<Unit filename="../include/etiss/fault/Action.h" />
+		<Unit filename="../include/etiss/fault/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/fault/" />
+		</Unit>
+		<Unit filename="../include/etiss/fault/Defs.h" />
+		<Unit filename="../include/etiss/fault/Fault.h" />
+		<Unit filename="../include/etiss/fault/Injector.h" />
+		<Unit filename="../include/etiss/fault/InjectorAddress.h" />
+		<Unit filename="../include/etiss/fault/Stressor.h" />
+		<Unit filename="../include/etiss/fault/Trigger.h" />
+		<Unit filename="../include/etiss/fault/XML.h" />
+		<Unit filename="../include/etiss/fault/xml/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/fault/xml/" />
+		</Unit>
+		<Unit filename="../include/etiss/fault/xml/pugiconfig.hpp" />
+		<Unit filename="../include/etiss/fault/xml/pugixml.hpp" />
+		<Unit filename="../include/etiss/fpu/386-GCC.h" />
+		<Unit filename="../include/etiss/fpu/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/fpu/" />
+		</Unit>
+		<Unit filename="../include/etiss/fpu/milieu.h" />
+		<Unit filename="../include/etiss/helper/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/helper/" />
+		</Unit>
+		<Unit filename="../include/etiss/helper/CPUArchLibrary.h" />
+		<Unit filename="../include/etiss/helper/JITLibrary.h" />
+		<Unit filename="../include/etiss/helper/Misc.h" />
+		<Unit filename="../include/etiss/helper/PluginLibrary.h" />
+		<Unit filename="../include/etiss/interfaces/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include/etiss/interfaces/" />
+		</Unit>
+		<Unit filename="../include/etiss/interfaces/Delegate.h" />
+		<Unit filename="../include/etiss/interfaces/Dot.h" />
+		<Unit filename="../include/etiss/interfaces/VCD.h" />
+		<Unit filename="../include/etiss/interfaces/Wishbone.h" />
+		<Unit filename="../include_c/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include_c/" />
+		</Unit>
+		<Unit filename="../include_c/etiss/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include_c/etiss/" />
+		</Unit>
+		<Unit filename="../include_c/etiss/CVirtualStruct.h" />
+		<Unit filename="../include_c/etiss/jit/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include_c/etiss/jit/" />
+		</Unit>
+		<Unit filename="../include_c/etiss/jit/CPU.h" />
+		<Unit filename="../include_c/etiss/jit/ReturnCode.h" />
+		<Unit filename="../include_c/etiss/jit/System.h" />
+		<Unit filename="../include_c/etiss/jit/fpu/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/include_c/etiss/jit/fpu/" />
+		</Unit>
+		<Unit filename="../include_c/etiss/jit/fpu/softfloat.h" />
+		<Unit filename="../include_c/etiss/jit/types.h" />
+		<Unit filename="include/etiss/config.h" />
+		<Unit filename="../main.cpp" />
+		<Unit filename="../projects/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/projects/" />
+		</Unit>
+		<Unit filename="../src/Benchmark.cpp" />
+		<Unit filename="../src/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/" />
+		</Unit>
+		<Unit filename="../src/CPUArch.cpp" />
+		<Unit filename="../src/CPUCore.cpp" />
+		<Unit filename="../src/CVirtualStruct.cpp" />
+		<Unit filename="../src/CodePart.cpp" />
+		<Unit filename="../src/DebugSystem.cpp" />
+		<Unit filename="../src/ETISS.cpp" />
+		<Unit filename="../src/ETISSInit.cpp" />
+		<Unit filename="../src/ETISSPython.cpp" />
+		<Unit filename="../src/ErrorDefinition.cpp" />
+		<Unit filename="../src/FastMemory.cpp" />
+		<Unit filename="../src/Instruction.cpp" />
+		<Unit filename="../src/IntegratedLibrary.cpp" />
+		<Unit filename="../src/IntegratedLibrary/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/IntegratedLibrary/" />
+		</Unit>
+		<Unit filename="../src/IntegratedLibrary/InstructionAccurateCallback.cpp" />
+		<Unit filename="../src/IntegratedLibrary/Logger.cpp" />
+		<Unit filename="../src/IntegratedLibrary/MemoryDevice.cpp" />
+		<Unit filename="../src/IntegratedLibrary/PreInstructionManipulationCallback.cpp" />
+		<Unit filename="../src/IntegratedLibrary/PrintInstruction.cpp" />
+		<Unit filename="../src/IntegratedLibrary/VariableValueLogger.cpp" />
+		<Unit filename="../src/IntegratedLibrary/VirtualStructMemory.cpp" />
+		<Unit filename="../src/IntegratedLibrary/errorInjection/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/IntegratedLibrary/errorInjection/" />
+		</Unit>
+		<Unit filename="../src/IntegratedLibrary/errorInjection/Plugin.cpp" />
+		<Unit filename="../src/IntegratedLibrary/fault/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/IntegratedLibrary/fault/" />
+		</Unit>
+		<Unit filename="../src/IntegratedLibrary/fault/SwitchSystem.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/IntegratedLibrary/gdb/" />
+		</Unit>
+		<Unit filename="../src/IntegratedLibrary/gdb/GDBConnection.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/GDBCore.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/GDBServer.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/GDBSystemWrapper.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/Hex.cpp" />
+		<Unit filename="../src/IntegratedLibrary/gdb/UnixTCPGDBConnection.cpp" />
+		<Unit filename="../src/IntegratedLibraryHelper.cpp" />
+		<Unit filename="../src/InterruptHandler.cpp" />
+		<Unit filename="../src/InterruptVector.cpp" />
+		<Unit filename="../src/JIT.cpp" />
+		<Unit filename="../src/LibraryInterface.cpp" />
+		<Unit filename="../src/Misc.cpp" />
+		<Unit filename="../src/Plugin.cpp" />
+		<Unit filename="../src/ReturnCode.cpp" />
+		<Unit filename="../src/System.cpp" />
+		<Unit filename="../src/Timing.cpp" />
+		<Unit filename="../src/Translation.cpp" />
+		<Unit filename="../src/VirtualStruct.cpp" />
+		<Unit filename="../src/fault/Action.cpp" />
+		<Unit filename="../src/fault/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/fault/" />
+		</Unit>
+		<Unit filename="../src/fault/Fault.cpp" />
+		<Unit filename="../src/fault/Injector.cpp" />
+		<Unit filename="../src/fault/InjectorAddress.cpp" />
+		<Unit filename="../src/fault/Stressor.cpp" />
+		<Unit filename="../src/fault/Trigger.cpp" />
+		<Unit filename="../src/fault/XML.cpp" />
+		<Unit filename="../src/fault/xml/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/fault/xml/" />
+		</Unit>
+		<Unit filename="../src/fault/xml/pugixml.cpp" />
+		<Unit filename="../src/fpu/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/fpu/" />
+		</Unit>
+		<Unit filename="../src/fpu/softfloat.cpp" />
+		<Unit filename="../src/interfaces/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/src/interfaces/" />
+		</Unit>
+		<Unit filename="../src/interfaces/Delegate.cpp" />
+		<Unit filename="../src/interfaces/Dot.cpp" />
+		<Unit filename="../src/interfaces/VCD.cpp" />
+		<Unit filename="../src/interfaces/Wishbone.cpp" />
+		<Unit filename="../systemc/CMakeLists.txt">
+			<Option virtualFolder="CMake Files/systemc/" />
+		</Unit>
+		<Unit filename="../systemc/FindSystemC.cmake">
+			<Option virtualFolder="CMake Files/systemc/" />
+		</Unit>
+		<Unit filename="../systemc/SimpleMemory.cpp" />
+		<Unit filename="../systemc/SimpleMemory.h" />
+		<Unit filename="../systemc/SystemCBridge.cpp" />
+		<Unit filename="../systemc/SystemCBridge.h" />
+		<Unit filename="../systemc/SystemCInterface.cpp" />
+		<Unit filename="../systemc/SystemCInterface.h" />
+		<Unit filename="../systemc/cpu_systemc_etiss_lib/cpu_etiss_sc.cpp" />
+		<Unit filename="../systemc/cpu_systemc_etiss_lib/cpu_etiss_sc.h" />
+		<Unit filename="../systemc/cpu_systemc_interface_lib/cpu_systemcinterface_sc.cpp" />
+		<Unit filename="../systemc/cpu_systemc_interface_lib/cpu_systemcinterface_sc.h" />
+		<Unit filename="../systemc/main.cpp" />
+		<Extensions>
+			<envvars />
+			<code_completion />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

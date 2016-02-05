@@ -1,0 +1,222 @@
+/**
+
+@copyright
+<pre>
+
+
+	Copyright (c) 2014 Institute for Electronic Design Automation, TU Munich
+
+	The above copyright notice and this permission notice shall be included in
+	all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	THE SOFTWARE.
+
+
+</pre>
+@author Marc Greim <marc.greim@mytum.de>
+
+@date July 29, 2014
+
+@version 0.1
+
+*/
+/**
+	@file
+
+	@brief
+
+	@detail
+
+
+
+
+*/
+
+
+#include <map>
+#include <iostream>
+#include <memory>
+
+#include "etiss/ETISS.h"
+#include "etiss/DebugSystem.h"
+
+
+#include <cstring>
+
+#include <sstream>
+
+using namespace etiss;
+
+
+#include "etiss/Instruction.h"
+
+#include <ctime>
+
+
+int main( int argc, const char* argv[] ) {
+{
+
+	etiss::Initializer initializer(argc,argv,"-fno-sigint-console");
+
+	// create memory device
+	DebugSystem dsys;
+	// load image to memory
+	dsys.load(0,"../SW/test3/code.bin");
+
+	// can be used to write a small assembler programm beginning at address 0
+	if (true){
+		std::list<etiss::uint32> instructions;
+		//OR1K
+		{
+		    instructions.push_back(0xb0f36080);// this is for the ISB instruction
+		    instructions.push_back(0x82468746);//little endioan this is to test the MOV instruction
+		    instructions.push_back(0x82438743);// this is for the ORRS instruction
+			instructions.push_back(0x85449544);//ADD SP plus reg, T2 Rm=0,2
+			instructions.push_back(0x68446944);//ADD SP plus reg, T1 Rdm=0,1
+			instructions.push_back(0x13b07fb0);//ADD SP plus imm, T2 imm=0x13,ff
+			instructions.push_back(0x13a8ffa8);//ADD SP plus imm, T1 imm=0x13,ff
+			instructions.push_back(0xb61ddb1c);//ADD imm, T1 imm3=6,3 Rn=6,3 Rd=6,3
+			instructions.push_back(0x8d19e718);//ADD reg, T1, rm=6,3 rn= 1,4 rd=5,7
+			instructions.push_back(0x87336934);//ADD imm, T2 imm8=0x87,0x69 Rdn=3,4
+			instructions.push_back(0x58443744);//ADD reg, T2, rm=b,6 rn= 0,7 rd=0,7
+			instructions.push_back(0x72415f41);//ADCS, rdn=2,7 rm = 6,3
+			instructions.push_back(0xf8a5f4a4);//ADR rd=5,4 imm=0xf8, 0xf4
+			instructions.push_back(0x2b401e40);//ANDS rm = 5,3 rn=3,6
+			instructions.push_back(0xAE15AD13);//ASR_imm imm5 = 0x16, 0xE   rm = 5,5 rd = 6, 5
+			instructions.push_back(0x16412d41);//ASR_reg rm = 2,5 rd = 6, 5
+			instructions.push_back(0xACD2FFD3);//B_T1 cond = 2,3 imm8 = 0xac.0xff
+			instructions.push_back(0xFFE0FFE7);//B_T2 imm11 = 0xff,0xeff
+			instructions.push_back(0xA943BA43);//BIC rm = 5,7 rdn = 1,2
+			instructions.push_back(0xFFF7DFD6);//BL s=1 imm10=0x3ff J1 = 0 J2 = 0 imm = 0x6df
+			instructions.push_back(0xE8479847);//BLX rm = 13,3
+			instructions.push_back(0x20472847);//BX rm = 4, 5
+			instructions.push_back(0xC142C442);
+			instructions.push_back(0x05280228);
+			instructions.push_back(0x81428442);
+			instructions.push_back(0x41404640);
+			instructions.push_back(0x02c804c8);
+			instructions.push_back(0x02680468);
+			instructions.push_back(0x01480348);
+			instructions.push_back(0x01580258);
+			instructions.push_back(0x02780478);
+			instructions.push_back(0x025d045d);
+			instructions.push_back(0x02880488);
+			instructions.push_back(0x035a015a);
+			instructions.push_back(0x03560456);
+			instructions.push_back(0x035e065e);
+			instructions.push_back(0x00000000);
+			instructions.push_back(0x81408340);
+			instructions.push_back(0x04080308);
+			instructions.push_back(0x0140c340);
+			instructions.push_back(0x04200321);
+			instructions.push_back(0x03460146);
+			instructions.push_back(0x00010002);
+			instructions.push_back(0x42434143);
+			instructions.push_back(0xc443c543); //instruction number 47 on note book
+			instructions.push_back(0xbf00bf00);//intruction 49--- nop
+			instructions.push_back(0x01430243);
+			instructions.push_back(0x02b804b8);
+			instructions.push_back(0x02b403b4);
+			instructions.push_back(0x02ba03ba);
+			instructions.push_back(0x41ba44ba);
+			instructions.push_back(0xc1bac2ba);
+			instructions.push_back(0xc241c341);
+			instructions.push_back(0x45424142);
+			instructions.push_back(0x82418341);
+			instructions.push_back(0x43bf42bf);
+			instructions.push_back(0x02c004c0);
+			instructions.push_back(0x03600460);
+			instructions.push_back(0x03900490);
+			instructions.push_back(0x30504050);
+			instructions.push_back(0x02700370);//instruciton number 64-- strb instruction
+			instructions.push_back(0x02540354);
+			instructions.push_back(0x03800480);
+			instructions.push_back(0x04520352);
+			instructions.push_back(0x021e041e);
+			instructions.push_back(0x04380238);
+			instructions.push_back(0x041a031a);
+			instructions.push_back(0x82b084b0);
+			instructions.push_back(0x06df05df);
+			instructions.push_back(0x43b244b2);
+			instructions.push_back(0x03b204b2);
+			instructions.push_back(0x03420442);
+			instructions.push_back(0x02de03de);
+			instructions.push_back(0xc1b2c3b2);
+			instructions.push_back(0x81b284b2);
+			instructions.push_back(0x23bf24bf);
+			instructions.push_back(0x34bf32bf);// the last instruction -- instructino number 81-- WFI instruction.
+			//--/////////////////////--32-bit-instruction-testing--/////////////////--//
+			instructions.push_back(0xb0f36080);
+			instructions.push_back(0xbff0508f);
+			instructions.push_back(0xbff3408f);
+			instructions.push_back(0xeff30080);
+			instructions.push_back(0x80f30088);
+			instructions.push_back(0xf0f700a6);//the 32 bit udf.w instruction f7f0a600
+		//	instructions.push_back(0xE0200803);
+		//	instructions.push_back(0x03FFFFF6);
+		//	instructions.push_back(0xE0200803);
+		}
+
+		unsigned pos = 0;
+		for (std::list<etiss::uint32>::iterator iter = instructions.begin();iter != instructions.end();iter++){
+			etiss::uint8 buf[4];
+			buf[0] = *iter>>24;
+			buf[1] = *iter>>16;
+			buf[2] = *iter>>8;
+			buf[3] = *iter;
+			dsys.dbg_write(pos,buf,4);
+			pos += 4;
+		}
+	}
+
+
+	std::map<std::string,std::string> options;
+
+	options.clear();
+	std::shared_ptr<etiss::CPUCore> cpu = etiss::CPUCore::create("ARMv6M","core0",options);
+
+	if (!cpu){
+		etiss::log(etiss::ERROR,"failed to create cpu core");
+		return -1;
+	}
+
+	cpu->setTimer(false);
+
+	VirtualStruct::root()->mountStruct("core0",cpu->getStruct());
+
+	cpu->set(getJIT("GCCJIT"));
+
+	etiss::uint64 sa = 0;
+	//cpu->reset(&sa); // optional reset with start address
+
+
+	options.clear();
+	//cpu->addPlugin(etiss::getPlugin("PrintInstruction",options));	// a plugin that prints the instruction and its address when it is executed
+
+	options.clear();
+	options["port"] = "2222"; // define port (default: 2222)
+	//cpu->addPlugin(etiss::getPlugin("gdbserver",options)); // adds a gdb debug server (connect with "target remote localhost:2222")
+
+	options.clear();
+	options["logaddr"] = "0x80000000";
+	options["logmask"] = "0xF0000000";
+	cpu->addPlugin(etiss::getPlugin("Logger",options)); // simple logger write to logaddr to print a character.
+
+
+    etiss_int32 exception = cpu->execute(dsys);
+
+	std::cout << "CPU exited with exception: 0x" <<std::hex << exception << std::dec << ": " << etiss::RETURNCODE::getErrorMessages()[exception] << std::endl;
+
+	cpu.reset(); // delete cpu
+}
+
+	//quick_exit( 0 );
+
+}
+

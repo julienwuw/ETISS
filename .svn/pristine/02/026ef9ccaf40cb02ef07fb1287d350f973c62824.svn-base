@@ -1,0 +1,907 @@
+#ifndef TRACEABLEFIELD_INCLUDE_BODY
+#ifndef OPERATIONTRACING_H_INCLUDED
+#define OPERATIONTRACING_H_INCLUDED
+
+#include "TraceableFieldDef.h"
+
+#include "etiss/interfaces/Dot.h" // comment out to disable dot trace file support
+#include "etiss/interfaces/VCD.h"
+
+#include "UDefMath.h" // comment out to disable advanced undefined state calculations
+
+namespace tf
+{
+
+namespace trace
+{
+
+enum Operation
+{
+
+    OP_CTOR_NOARG,
+    OP_CTOR_CONST,
+    OP_CTOR_VAL_ERRVAL,
+    OP_CTOR_COPY,
+    OP_CTOR_MOVE,
+    OP_DTOR,
+
+    OP_ADD,
+    OP_AND,
+    OP_OR,
+    OP_LAND,
+    OP_LOR,
+    OP_SUB,
+    OP_LSH,
+    OP_RSH,
+    OP_LT,
+    OP_GT,
+    OP_EQ,
+    OP_ASSIGN,
+    OP_XOR,
+    OP_NE,
+    OP_NOT,
+    OP_IFASSIGN,
+    OP_TERNARY,
+    OP_BB,
+    OP_MUL,
+    OP_DIV,
+    OP_COMPL,
+    OP_NEG,
+
+    //ARRAY ACCESS
+    OP_A_READ_V,
+    OP_A_READ_E,
+    OP_A_WRITE_V,
+    OP_A_WRITE_E,
+    OP_A_WRITEIF_V,
+    OP_A_WRITEIF_E,
+
+
+    /** special operation to signal that a traceable field has been modified; OP_MUTABLE comes from the c++ keyword but doesn't implicate a restiction on which changes can be signaled with this
+
+        use template<typename T> tf::trace::modified(TraceableField<T> & field) to signal this operation.
+
+        field will be the dst parameter to keep the assumption that dst is never 0 valid
+    */
+    OP_MUTABLE,
+
+
+
+};
+
+inline const char * toString(Operation op)
+{
+    switch (op)
+    {
+    case OP_CTOR_NOARG:
+        return "c";
+    case OP_CTOR_CONST:
+        return "ci";
+    case OP_CTOR_VAL_ERRVAL:
+        return "cv";
+    case OP_CTOR_COPY:
+        return "cc";
+    case OP_CTOR_MOVE:
+        return "cm";
+    case OP_DTOR:
+        return "d";
+    case OP_ADD:
+        return "+";
+    case OP_AND:
+        return "&";
+    case OP_OR:
+        return "|";
+    case OP_LAND:
+        return "l&";
+    case OP_LOR:
+        return "l|";
+    case OP_SUB:
+        return "-";
+    case OP_LSH:
+        return "<<";
+    case OP_RSH:
+        return ">>";
+    case OP_LT:
+        return "l<"; // x < y
+    case OP_GT:
+        return "l>"; // x > y
+    case OP_EQ:
+        return "l="; // x==y
+    case OP_ASSIGN:
+        return "="; // x = y
+    case OP_XOR:
+        return "a_xor"; // x^y
+    case OP_NE:
+        return "l_ne"; // x != y
+    case OP_NOT:
+        return "l_not"; // !x
+    case OP_IFASSIGN:
+        return "o_assignIf"; // if(c) x = y
+    case OP_TERNARY:
+        return "o_ternary"; // (c?x:y)
+    case OP_BB:
+        return "o_blackbox"; // x = func( y ,z )
+    case OP_MUL:
+        return "a*"; // x * y
+    case OP_DIV:
+        return "a/";	// x / y
+    case OP_COMPL:
+        return "a~";	// ~x
+    case OP_NEG:
+        return "a_neg"; // -x
+    case OP_A_READ_V:
+        return "o_a_read_val";
+    case OP_A_READ_E:
+        return "o_a_read_errval";
+    case OP_A_WRITE_V:
+        return "o_a_write_val";
+    case OP_A_WRITE_E:
+        return "o_a_write_errval";
+    case OP_A_WRITEIF_V:
+        return "o_a_writeif_val";
+    case OP_A_WRITEIF_E:
+        return "o_a_writeif_errval";
+    case OP_MUTABLE:
+        return "op_mutable";
+    }
+    {
+        static bool logged = false;
+        if (!logged){
+            logged = true;
+            etiss::log(etiss::ERROR,"a switch statement doesn't handle all cases. update code",ETISS_SRCLOC);
+        }
+    }
+    return "";
+}
+
+
+
+
+
+template <typename T>
+void ctor_noarg(TraceableField<T> & tf);
+
+template <typename T>
+void ctor_val_errval(TraceableField<T> & tf);
+
+
+template <typename T>
+void ctor_const(TraceableField<T> & tf);
+
+template <typename T,typename O>
+void ctor_copy(TraceableField<T> & tf,const TraceableField<O> & src);
+
+template <typename T,typename O>
+void ctor_move(TraceableField<T> & tf,const TraceableField<O> & src);
+
+template <typename T>
+void dtor(TraceableField<T> & tf);
+
+template <typename T,typename O>
+void assign(TraceableField<T> & tf,const TraceableField<O> & src);
+
+template <typename R,typename T1,typename T2>
+void ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2);
+
+template <typename R,typename T1>
+void ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1);
+
+template <typename R,typename C,typename T, typename E>
+void ternary(TraceableField<R> & dst,const TraceableField<C> &  cond,const TraceableField<T> & op1,const TraceableField<E> & op2);
+
+template <typename R,typename T1>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1);
+template <typename R,typename T1,typename T2>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2);
+template <typename R,typename T1,typename T2,typename T3>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2,const TraceableField<T3> & op3);
+template <typename R,typename T1>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> * array,size_t len);
+
+template <typename R,typename T1,typename T2>
+void arrayRead(bool val,TraceableField<R> & tf,const TraceableField<T1> & field,const TraceableField<T2> & index);
+template <typename T1,typename T2,typename T3>
+void arrayWrite(bool val, TraceableField<T1> & field,const TraceableField<T2> & index,const TraceableField<T3> & value);
+template <typename T1,typename T2,typename T3,typename T4>
+void arrayWriteIf(bool val,TraceableField<T1> & field,const TraceableField<T2> & cond,const TraceableField<T3> & index,const TraceableField<T4> & value);
+
+template <typename T1,typename T2,typename T3>
+void assignIf(TraceableField<T1> & dst,const TraceableField<T2> & cond,const TraceableField<T3> & value);
+
+template<typename T>
+void modified(TraceableField<T> & field);
+
+}
+}
+
+namespace etiss {
+
+template<> std::string toString<tf::trace::Operation>(const tf::trace::Operation & op);
+
+}
+
+#endif // OPERATIONTRACING_H_INCLUDED
+
+#else
+
+#ifndef OPERATIONTRACING_H_BODY_INCLUDED
+#define OPERATIONTRACING_H_BODY_INCLUDED
+
+
+
+namespace tf
+{
+
+namespace trace
+{
+
+#ifdef ETISS_INTERFACES_DOT_H
+
+extern etiss::interfaces::dot::ValueOperationTraceGraph * valueOperationTraceGraph;
+extern etiss::interfaces::dot::ValueOperationTraceGraphStreamer * valueOperationTraceGraphStreamer;
+extern etiss::interfaces::dot::VariableDependencyGraph * variableDependencyGraph;
+extern etiss::interfaces::VCD * vcd;
+
+#endif
+
+template <typename R,typename C,typename T, typename E>
+/**
+	returnes mask bit mapping: dst:0 cond:1 op1:2 op2:3; for more specific values the val part is shifted 4 bits and the errval part is shifted 8 bits
+*/
+unsigned usageMask(const Operation op,TraceableField<R> * const dst,const TraceableField<C> * const cond,const TraceableField<T> * const op1,const TraceableField<E> * const op2){
+
+	unsigned mask = 0;
+
+	auto setBit = [&mask](unsigned bit,bool val){
+		if (val){
+			mask = mask | (1<<bit);
+			if (bit < 4){
+				mask = mask | (1<<(bit+4));
+				mask = mask | (1<<(bit+8));
+			}
+		} else {
+			mask = mask & ~(1<<bit);
+			if (bit < 4){
+				mask = mask & ~(1<<(bit+4));
+				mask = mask & ~(1<<(bit+8));
+			}
+		}
+	};
+
+
+	// IMPORTANT edit the general bits 0-3 first if setBit is used, since that will apply the bits also to higher positions (see setBit)
+	// NOTE: it is not neccessary to set general used bits if all val/errval specific bits are set (see end of section)
+	switch (op){
+	case tf::trace::OP_IFASSIGN:
+		setBit(0,false);
+		setBit(1,true); // condition is always used
+		setBit(6,cond->val);
+		setBit(10,cond->errval);
+		break;
+	case tf::trace::OP_TERNARY:
+		setBit(0,false);
+		setBit(1,true); // condition is always used
+		setBit(6,cond->val || (!tf::udef::boolEqual(cond->val,cond->udef_val_)));
+		setBit(7,(!cond->val) || (!tf::udef::boolEqual(cond->val,cond->udef_val_)));
+		setBit(10,cond->errval || (!tf::udef::boolEqual(cond->errval,cond->udef_errval_)));
+		setBit(11,(!cond->errval) || (!tf::udef::boolEqual(cond->errval,cond->udef_errval_)));
+		break;
+    case OP_CTOR_NOARG: // there should be a distinction between noarg, const and val/errval case. but this cannot be signaled here
+    case OP_CTOR_CONST:
+    case OP_CTOR_VAL_ERRVAL:
+    case OP_DTOR:
+        setBit(0,false);
+		setBit(1,false);
+		setBit(2,false);
+		setBit(3,false);
+        break;
+    case OP_CTOR_COPY: // take special care if this case is changed
+    case OP_CTOR_MOVE: // take special care if this case is changed
+    case OP_ASSIGN: // take special care if this case is changed
+    case OP_BB: // take special care if this case is changed
+    case OP_ADD:
+    case OP_AND:
+    case OP_OR:
+    case OP_LAND:
+    case OP_LOR:
+    case OP_SUB:
+    case OP_LSH:
+    case OP_RSH:
+    case OP_LT:
+    case OP_GT:
+    case OP_EQ:
+    case OP_XOR:
+    case OP_NE:
+    case OP_MUL:
+    case OP_DIV:
+    case OP_NOT:
+    case OP_COMPL:
+    case OP_NEG:
+        setBit(0,false);
+		setBit(1,cond);
+		setBit(2,op1); // only this should be true
+		setBit(3,op2);
+        break;
+    case OP_A_READ_V:
+        setBit(4,false);
+        setBit(5,false);
+        setBit(6,true); // array field
+        setBit(7,true); // index
+        break;
+    case OP_A_READ_E:
+        setBit(8,false);
+        setBit(9,false);
+        setBit(10,true); // array field
+        setBit(11,true); // index
+        break;
+    case OP_A_WRITE_V:
+        setBit(4,false);
+        setBit(5,false);
+        setBit(6,true); // index
+        setBit(7,true); // value
+        break;
+    case OP_A_WRITE_E:
+        setBit(8,false);
+        setBit(9,false);
+        setBit(10,true); // index
+        setBit(11,true); // value
+        break;
+    case OP_A_WRITEIF_V:
+        setBit(4,(!cond->val) || (!tf::udef::boolEqual(cond->val,cond->udef_val_))); // the array field is not modified.
+        setBit(5,true);
+        setBit(6,(cond->val) || (!tf::udef::boolEqual(cond->val,cond->udef_val_))); // index
+        setBit(7,(cond->val) || (!tf::udef::boolEqual(cond->val,cond->udef_val_))); // value
+        break;
+    case OP_A_WRITEIF_E:
+        setBit(8,(!cond->errval) || (!tf::udef::boolEqual(cond->errval,cond->udef_errval_))); // the array field is not modified.
+        setBit(9,true);
+        setBit(10,(cond->errval) || (!tf::udef::boolEqual(cond->errval,cond->udef_errval_))); // index
+        setBit(11,(cond->errval) || (!tf::udef::boolEqual(cond->errval,cond->udef_errval_))); // value
+        break;
+    case OP_MUTABLE:
+        setBit(8,false); ///Note: it could be argued that in this case dst could be considered in input. but this may have unwanted effects if any udef/relation is created
+        setBit(9,false);
+        setBit(10,false);
+        setBit(11,false);
+        break;
+	//default: // Don't use default. results from this function need to be accurate
+	}
+	/////////////////////
+
+	mask = mask & ~0x000F; // remove general part
+	mask = mask | ((mask>>4)&0xf) | ((mask>>8)&0xf); // generate general part from specific part
+
+	return 0xF;
+}
+
+template <typename R,typename C,typename T, typename E>
+bool isUsed(const void * field,const Operation op,TraceableField<R> * const dst,const TraceableField<C> * const cond,const TraceableField<T> * const op1,const TraceableField<E> * const op2){
+	unsigned mask = usageMask(op,dst,cond,op1,op2);
+	if ((field == dst) && ((mask&1) || (mask&16) || (mask&256)))
+		return true;
+    if ((field == cond) && ((mask&2) || (mask&32) || (mask&512)))
+		return true;
+    if ((field == op1) && ((mask&4) || (mask&64) || (mask&1024)))
+		return true;
+    if ((field == op2) && ((mask&8) || (mask&128) || (mask&2048)))
+        return true;
+
+	return false;
+}
+
+
+
+
+#ifdef UDEFMATH_H_INCLUDED
+template <typename R,typename C,typename T, typename E>
+/**
+    central function to calculate which bits are undefined
+    larger calculations are located in UDefMath.h
+*/
+void refinedUdefMask(const tf::trace::Operation op,TraceableField<R> * const dst,const TraceableField<C> * const cond,const TraceableField<T> * const op1,const TraceableField<E> * const op2)
+{
+
+    if (likely(dst) && unlikely( (dst->flags()&tf::flags::ALWAYSDEFINED) ) )
+    {
+        dst->udef_errval_ = 0;
+        dst->udef_val_ = 0;
+        return;
+    }
+
+
+    switch (op)
+    {
+    case tf::trace::OP_TERNARY:
+        dst->udef_val_ = tf::udef::calcUdef_ternary(cond->val,cond->udef_val_,op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_ternary(cond->errval,cond->udef_errval_,op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_IFASSIGN:
+        tf::udef::calcUdef_assignif(dst->val,dst->udef_val_,cond->val,cond->udef_val_,op1->val,op1->udef_val_);
+        tf::udef::calcUdef_assignif(dst->errval,dst->udef_errval_,cond->errval,cond->udef_errval_,op1->errval,op1->udef_errval_);
+        break;
+    case tf::trace::OP_ADD:
+        dst->udef_val_ = tf::udef::calcUdef_add(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_add(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_SUB:
+        dst->udef_val_ = tf::udef::calcUdef_sub(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_sub(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_AND:
+        dst->udef_val_ = tf::udef::calcUdef_and(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_and(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_OR:
+        dst->udef_val_ = tf::udef::calcUdef_or(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_or(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_LAND:
+        dst->udef_val_ = tf::udef::calcUdef_l_and(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_l_and(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_LOR:
+        dst->udef_val_ = tf::udef::calcUdef_l_or(op1->val,op1->udef_val_,op2->val,op2->udef_val_);
+        dst->udef_errval_ = tf::udef::calcUdef_l_or(op1->errval,op1->udef_errval_,op2->errval,op2->udef_errval_);
+        break;
+    case tf::trace::OP_NOT:
+        dst->udef_val_ = !tf::udef::boolEqual(op1->val,op1->udef_val_);
+        dst->udef_errval_ = !tf::udef::boolEqual(op1->errval,op1->udef_errval_);
+        break;
+    case tf::trace::OP_NEG:
+        dst->udef_val_ = op1->udef_val_;
+        dst->udef_errval_ = op1->udef_errval_;
+        break;
+    case tf::trace::OP_LSH:
+        dst->udef_val_ = op2->udef_val_?-1:((R)op1->udef_val_<<op2->val);
+        dst->udef_errval_ = op2->udef_errval_?-1:((R)op1->udef_errval_<<op2->errval);
+        break;
+    case tf::trace::OP_RSH:
+        dst->udef_val_ = op2->udef_val_?-1:((R)op1->udef_val_>>op2->val);
+        dst->udef_errval_ = op2->udef_errval_?-1:((R)op1->udef_errval_>>op2->errval);
+        break;
+    case tf::trace::OP_ASSIGN:
+    case tf::trace::OP_CTOR_COPY:
+        dst->udef_val_ = op1->udef_val_;
+        dst->udef_errval_ = op1->udef_errval_;
+        break;
+    case tf::trace::OP_MUTABLE:
+        break; // dont make changes in this case
+
+
+
+	default:
+		if (((!cond) || (cond->udef_val_ == 0)) && ((!op1) || (op1->udef_val_ == 0)) && ((!op2) || (op2->udef_val_ == 0)))
+        {
+            dst->udef_val_ = 0;
+        }
+        else
+        {
+            dst->udef_val_ = -1;
+        }
+        if (((!cond) || (cond->udef_errval_ == 0)) && ((!op1) || (op1->udef_errval_ == 0)) && ((!op2) || (op2->udef_errval_ == 0)))
+        {
+            dst->udef_errval_ = 0;
+        }
+        else
+        {
+            dst->udef_errval_ = -1;
+        }
+        break;
+    }
+
+
+}
+#endif
+
+//#define ETISS_TF_ALLOWTRACING
+
+template <typename R,typename C,typename T, typename E>
+void operation(const Operation op,TraceableField<R> * const dst,const TraceableField<C> * const cond,const TraceableField<T> * const op1,const TraceableField<E> * const op2)
+{
+
+
+    bool fatal = false;
+
+    if ((unlikely(cond) && unlikely(cond->flags()&tf::flags::UNDEFINEDISERROR_WEAK))){
+		if ((cond->udef_val_ || cond->udef_errval_) && isUsed(cond,op,dst,cond,op1,op2)){
+			std::cout << "read from undefined value which may not be undefined: " << cond->getName() << std::endl;
+			fatal = true;
+		}
+    }
+    if ((likely(op1) && unlikely(op1->flags()&tf::flags::UNDEFINEDISERROR_WEAK))){
+		if ((op1->udef_val_ || op1->udef_errval_) && isUsed(op1,op,dst,cond,op1,op2)){
+			std::cout << "read from undefined value which may not be undefined: " << op1->getName() << std::endl;
+			fatal = true;
+		}
+    }
+    if ((likely(op2) && unlikely(op2->flags()&tf::flags::UNDEFINEDISERROR_WEAK))){
+		if ((op2->udef_val_ || op2->udef_errval_) && isUsed(op2,op,dst,cond,op1,op2)){
+			std::cout << "read from undefined value which may not be undefined: " << op2->getName() << std::endl;
+			fatal = true;
+		}
+    }
+    if ((likely(dst) && unlikely(dst->flags()&tf::flags::UNDEFINEDISERROR_WEAK))){
+		if ((dst->udef_val_ || dst->udef_errval_) && isUsed(dst,op,dst,cond,op1,op2)){
+			std::cout << "read from undefined value which may not be undefined (dst): " << dst->getName() << std::endl;
+			fatal = true;
+		}
+    }
+// calculate undefined if not allways defined or if undefined is error
+    if (likely(!(dst->flags()&tf::flags::ALWAYSDEFINED) || (dst->flags()&tf::flags::UNDEFINEDISERROR)))   ///TODO? remove UNDEFINEDISERROR condition?
+    {
+#ifndef UDEFMATH_H_INCLUDED
+        if (((!cond) || (cond->udef_val_ == 0)) && ((!op1) || (op1->udef_val_ == 0)) && ((!op2) || (op2->udef_val_ == 0)))
+        {
+            dst->udef_val_ = 0;
+        }
+        else
+        {
+            dst->udef_val_ = -1;
+        }
+        if (((!cond) || (cond->udef_errval_ == 0)) && ((!op1) || (op1->udef_errval_ == 0)) && ((!op2) || (op2->udef_errval_ == 0)))
+        {
+            dst->udef_errval_ = 0;
+        }
+        else
+        {
+            dst->udef_errval_ = -1;
+        }
+#else
+        refinedUdefMask(op,dst,cond,op1,op2);
+#endif
+        if ((dst->flags()&tf::flags::UNDEFINEDISERROR) && (dst->udef_val_ || dst->udef_errval_))
+        {
+            std::cout << "a value that may not become undefined has become undefined: " << dst->getName() << std::endl;
+            fatal = true;
+        }
+    }
+    else
+    {
+        dst->udef_val_ = 0;
+        dst->udef_errval_ = 0;
+    }
+    if ((dst->flags()&tf::flags::VALISERRVAL))
+    {
+        dst->val = dst->errval;
+        dst->udef_val_ = dst->udef_errval_;
+    }
+
+#ifdef ETISS_TF_ALLOWTRACING
+#ifdef ETISS_INTERFACES_VCD_H
+    if (dst->vcd)
+    {
+        dst->vcd->update(sc_time_stamp(),*dst,(uint64_t)dst->errval,(uint64_t)dst->udef_errval_);
+        dst->vcd->update(sc_time_stamp(),dst->val,(uint64_t)dst->val,(uint64_t)dst->udef_val_);
+        dst->vcd->update(sc_time_stamp(),dst->errval,(uint64_t)dst->errval,(uint64_t)dst->udef_errval_);
+    }
+#endif
+
+#ifdef ETISS_INTERFACES_DOT_H
+    if (valueOperationTraceGraph && dst)
+    {
+        const char * opc = toString(op);
+        bool silent = false;
+        if (opc[0] == 'd')
+        {
+            valueOperationTraceGraph->undefineNode((void*)dst);
+            silent = true;
+        }
+        else if (opc[0] == 'c')
+        {
+            silent = !((opc[1]=='c')||(opc[1]=='m')); // log copy and move constructor operation
+        }
+        if (!silent)
+        {
+            // passthrough
+            if (cond)
+            {
+                etiss::interfaces::dot::ValueOperationTraceGraph::Link * link = valueOperationTraceGraph->link(cond,dst);
+                link->color = "red";
+                link->label = opc;
+            }
+
+            if (op1)
+            {
+                etiss::interfaces::dot::ValueOperationTraceGraph::Link * link = valueOperationTraceGraph->link(op1,dst);
+                link->color = cond?(cond->errval?"green":"gray"):"green";
+                link->label = opc;
+            }
+
+            if (op2)
+            {
+                etiss::interfaces::dot::ValueOperationTraceGraph::Link * link = valueOperationTraceGraph->link(op2,dst);
+                link->color = cond?(cond->errval?"gray":"blue"):"blue";
+                link->label = opc;
+            }
+
+        }
+    }
+    if (valueOperationTraceGraphStreamer && dst)
+    {
+        const char * opc = toString(op);
+        bool silent = false;
+        if (opc[0] == 'd')
+        {
+            valueOperationTraceGraphStreamer->undefineNode((void*)dst);
+            silent = true;
+        }
+        else if (opc[0] == 'c')
+        {
+            silent = !((opc[1]=='c')||(opc[1]=='m')); // log copy and move constructor operation
+        }
+        if (!silent)
+        {
+            valueOperationTraceGraphStreamer->link(dst, {cond,op1,op2},tf::trace::toString(op));
+        }
+    }
+    if (variableDependencyGraph && dst)
+    {
+        const char * opc = toString(op);
+        bool silent = false;
+        if (opc[0] == 'd')
+        {
+            variableDependencyGraph->deleted((void*)dst);
+            silent = true;
+        }
+        else if (opc[0] == 'c')
+        {
+            silent = !((opc[1]=='c')||(opc[1]=='m')); // log copy and move constructor operation
+        }
+        if (!silent)
+        {
+            variableDependencyGraph->link(dst, {cond,op1,op2});
+        }
+    }
+    if (fatal && variableDependencyGraph)
+    {
+        std::ofstream out("fulldep.dot");
+        variableDependencyGraph->write(out,"fulldep",[](const void*src,const void * dst,std::string & color)
+        {
+            uint64_t udsrc = ((TraceableFieldBase*)src)->getUDefMasks().first;
+            //uint64_t uddst = ((TraceableFieldBase*)dst)->getUDefMasks().first;
+            if (!((bool)udsrc))
+                color = "green";
+			else
+				color = "red";
+			//return ! (uddst&&udsrc);
+            //return !uddst;
+            return false;
+        },
+        [](const void * id,std::string & color){
+			//bool in = ((TraceableFieldBase*)id)->flags()&tf::flags::ISIN;
+			//bool out = ((TraceableFieldBase*)id)->flags()&tf::flags::ISOUT;
+			uint64_t ud = ((TraceableFieldBase*)id)->getUDefMasks().first;
+            if (ud)
+				color = "red";
+			else
+				color = "green";
+        }
+        );
+        out.flush();
+        out.close();
+        std::cout << std::endl << "file written" << std::endl;
+    }
+
+    if (fatal && vcd)
+		vcd->close();
+
+#endif
+#endif
+
+    if (fatal){
+    	tf::breakPointFunc();
+        exit(0);
+    }
+
+}
+
+
+template <typename T>
+void ctor_noarg(TraceableField<T> & tf)
+{
+    operation<T,T,T,T>(OP_CTOR_NOARG,&tf,0,0,0);
+}
+
+template <typename T>
+void ctor_val_errval(TraceableField<T> & tf)
+{
+    operation<T,T,T,T>(OP_CTOR_VAL_ERRVAL,&tf,0,0,0);
+}
+
+template <typename T>
+void ctor_const(TraceableField<T> & tf)
+{
+    operation<T,T,T,T>(OP_CTOR_CONST,&tf,0,0,0);
+}
+
+template <typename T,typename O>
+void ctor_copy(TraceableField<T> & tf,const TraceableField<O> & src)
+{
+    operation<T,T,O,T>(OP_CTOR_COPY,&tf,0,&src,0);
+}
+
+template <typename T,typename O>
+void ctor_move(TraceableField<T> & tf,const TraceableField<O> & src)
+{
+    operation<T,T,O,T>(OP_CTOR_MOVE,&tf,0,&src,0);
+}
+
+template <typename T>
+void dtor(TraceableField<T> & tf)
+{
+    operation<T,T,T,T>(OP_DTOR,&tf,0,0,0);
+}
+
+template <typename T,typename O>
+void assign(TraceableField<T> & tf,const TraceableField<O> & src)
+{
+    operation<T,T,O,T>(OP_ASSIGN,&tf,0,&src,0);
+}
+
+template <typename R,typename T1,typename T2>
+void ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2)
+{
+    switch (op[0])
+    {
+    case '+':
+        operation<R,R,T1,T2>(OP_ADD,&dst,0,&op1,&op2);
+        break;
+    case '&':
+        operation<R,R,T1,T2>((op[1]=='&')?OP_LAND:OP_AND,&dst,0,&op1,&op2);
+        break;
+    case '|':
+        operation<R,R,T1,T2>((op[1]=='|')?OP_LOR:OP_OR,&dst,0,&op1,&op2);
+        break;
+    case '-':
+        operation<R,R,T1,T2>(OP_SUB,&dst,0,&op1,&op2);
+        break;
+    case '<':
+        operation<R,R,T1,T2>((op[1]=='<')?OP_LSH:OP_LT,&dst,0,&op1,&op2);
+        break;
+    case '>':
+        operation<R,R,T1,T2>((op[1]=='>')?OP_LSH:OP_LT,&dst,0,&op1,&op2);
+        break;
+    case '=':
+        operation<R,R,T1,T2>((op[1]=='=')?OP_EQ:OP_ASSIGN,&dst,0,&op1,&op2);
+        break;
+    case '^':
+        operation<R,R,T1,T2>(OP_XOR,&dst,0,&op1,&op2);
+        break;
+    case '!':
+        switch (op[1])
+        {
+        case '=':
+            operation<R,R,T1,T2>(OP_NE,&dst,0,&op1,&op2);
+            break;
+        default:
+            std::cerr << "tf::trace::ooperator not implemented for " << op << std::endl;
+            operation<R,R,T1,T2>(OP_BB,&dst,0,&op1,&op2);
+        }
+        break;
+    case '*':
+        operation<R,R,T1,T2>(OP_MUL,&dst,0,&op1,&op2);
+        break;
+    case '/':
+        operation<R,R,T1,T2>(OP_DIV,&dst,0,&op1,&op2);
+        break;
+
+    default:
+        std::cerr << "tf::trace::ooperator not implemented for " << op << std::endl;
+        operation<R,R,T1,T2>(OP_BB,&dst,0,&op1,&op2);
+    }
+}
+
+template <typename R,typename T1>
+void ooperator(const char * op,TraceableField<R> & dst,const TraceableField<T1> & op1)
+{
+    switch (op[0])
+    {
+    case '!':
+        operation<R,R,T1,T1>(OP_NOT,&dst,0,&op1,0);
+        break;
+    case '~':
+        operation<R,R,T1,T1>(OP_COMPL,&dst,0,&op1,0);
+        break;
+    case '-':
+        operation<R,R,T1,T1>(OP_NEG,&dst,0,&op1,0);
+        break;
+    default:
+        std::cerr << "tf::trace::ooperator not implemented for " << op << std::endl;
+        operation<R,R,T1,T1>(OP_BB,&dst,0,&op1,0);
+    }
+}
+
+
+template <typename R,typename C,typename T, typename E>
+void ternary(TraceableField<R> & dst,const TraceableField<C> &  cond,const TraceableField<T> & op1,const TraceableField<E> & op2)
+{
+    operation(OP_TERNARY,&dst,&cond,&op1,&op2);
+}
+
+template <typename R,typename T1>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1)
+{
+    operation<R,T1,T1,T1>(OP_BB,&dst,&op1,0,0);
+}
+template <typename R,typename T1,typename T2>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2)
+{
+    operation<R,T1,T2,T2>(OP_BB,&dst,&op1,&op2,0);
+}
+template <typename R,typename T1,typename T2,typename T3>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> & op2,const TraceableField<T3> & op3)
+{
+    operation<R,T1,T2,T3>(OP_BB,&dst,&op1,&op2,&op3);
+}
+template <typename R,typename T1>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> * array,size_t len)
+{
+    TraceableField<R> tmp(0); // defined
+    for (size_t i = 0; i<len; i++)
+    {
+        bbop(tmp,tmp,array[i]);
+    }
+    bbop(dst,tmp);
+}
+template <typename R,typename T1,typename T2>
+void bbop(TraceableField<R> & dst,const TraceableField<T1> & op1,const TraceableField<T2> * array,size_t len)
+{
+    TraceableField<R> tmp(0); // defined
+    for (size_t i = 0; i<len; i++)
+    {
+        bbop(tmp,tmp,array[i]);
+    }
+    bbop(dst,op1,tmp);
+}
+template <typename R,typename T1,typename T2,typename T3,typename T4,typename... T>
+void bbop(TraceableField<R> & dst,const T1 & op1,const T2 & op2,const T3 & op3,const T4 & op4,const T & ... other){
+    TraceableField<R> tmp;
+    bbop(tmp,op3,op4,other...);
+    bbop(dst,tmp,op1,op2);
+}
+template <typename R,typename... T>
+void bbop(TraceableField<R> * dst,size_t size,const T & ... other){
+    TraceableField<R> tmp; // temporary parameter
+    TraceableField<R> tmpa[size]; // temp array; nedded if dst is also a input
+    for (size_t i = 0;i<size;i++)
+        bbop(tmpa[i],tmp,other...); // calculate masks
+    for (size_t i = 0;i<size;i++) // apply masks
+        dst[i] = tmpa[i];
+}
+
+
+
+template <typename R,typename T1,typename T2>
+void arrayRead(bool val,TraceableField<R> & tf,const TraceableField<T1> & field,const TraceableField<T2> & index)
+{
+    operation<R,R,T1,T2>(val?OP_A_READ_V:OP_A_READ_E,&tf,0,&field,&index);
+}
+template <typename T1,typename T2,typename T3>
+void arrayWrite(bool val, TraceableField<T1> & field,const TraceableField<T2> & index,const TraceableField<T3> & value)
+{
+    operation<T1,T1,T2,T3>(val?OP_A_WRITE_V:OP_A_WRITE_E,&field,0,&index,&value);
+}
+template <typename T1,typename T2,typename T3,typename T4>
+void arrayWriteIf(bool val,TraceableField<T1> & field,const TraceableField<T2> & cond,const TraceableField<T3> & index,const TraceableField<T4> & value)
+{
+    operation<T1,T2,T3,T4>(val?OP_A_WRITEIF_V:OP_A_WRITEIF_E,&field,&cond,&index,&value);
+}
+
+template <typename T1,typename T2,typename T3>
+void assignIf(TraceableField<T1> & dst,const TraceableField<T2> & cond,const TraceableField<T3> & value)
+{
+    operation<T1,T2,T3,T3>(OP_IFASSIGN,&dst,&cond,&value,0);
+}
+
+template<typename T>
+void modified(TraceableField<T> & field){
+    operation<T,T,T,T>(OP_MUTABLE,&field,0,0,0);
+}
+
+
+}
+}
+
+
+#endif
+#endif

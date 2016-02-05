@@ -1,0 +1,23 @@
+
+project(SW_example)
+
+
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/
+		DESTINATION examples/SW
+		FILES_MATCHING
+    	PATTERN "*.h"
+    	PATTERN "*.cpp"
+		PATTERN "*.c"
+		PATTERN "*.S"
+		PATTERN "*.s"
+		PATTERN "README"
+    	PATTERN "Makefile"
+	PATTERN "*.ld"
+    	PATTERN ".svn" EXCLUDE
+		PATTERN "*.in" EXCLUDE
+		PATTERN "CMakeLists.txt" EXCLUDE
+    	PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+)
+
+
+

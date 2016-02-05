@@ -1,0 +1,10 @@
+digraph GG {
+node [
+  fontsize = "12"
+];
+    "node7" [ label="TCCJIT" shape="polygon"];
+    "node0" [ label="ETISS" shape="polygon"];
+    "node7" -> "node0" // TCCJIT -> ETISS
+    "node15" [ label="/nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix/build/libtcc.a" shape="ellipse"];
+    "node7" -> "node15" // TCCJIT -> /nfs/TUEIEDAprojects/SystemDesign/work/virtualprototyping/YurunWu/etiss/0.4.3_lite_CortexM0/install/JITImpl/TCC/tcc_unix/build/libtcc.a
+}

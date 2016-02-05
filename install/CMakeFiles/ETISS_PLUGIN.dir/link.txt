@@ -1,0 +1,1 @@
+/usr/bin/c++  -fPIC  -std=c++0x -g   -shared -Wl,-soname,libETISS_PLUGIN.so -o libETISS_PLUGIN.so CMakeFiles/ETISS_PLUGIN.dir/src/IncludedFiles.cpp.o 

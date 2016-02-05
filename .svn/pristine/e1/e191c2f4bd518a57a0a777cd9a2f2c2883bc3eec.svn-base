@@ -1,0 +1,432 @@
+#include "VCPUStruct.h"
+
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures__Dpi.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures__Syms.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200mp_nofeatures.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_top.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_cpu.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_ctrl.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_rf.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_alu.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_sprs.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_except.h"
+#include "../verilated/or1k/obj_dir/Vor1200mp_nofeatures_or1200_dpram.h"
+
+extern "C" {
+	extern void signal_injected_fault();
+}
+
+namespace etiss
+{
+
+namespace verilator
+{
+
+std::shared_ptr<etiss::VirtualStruct> getStruct(Vor1200mp_nofeatures * vcore,std::set<tf::TraceableFieldBase*> & tfbs)
+{
+
+    auto ret = etiss::VirtualStruct::allocate(vcore,[](etiss::VirtualStruct::Field * f)
+    {
+        //delete f;
+    });
+
+    for (int i = 0; i<32; ++i)
+    {
+        ret->addField(
+            new etiss::VirtualStruct::Field(
+                *ret,
+                std::string("R")+etiss::toString(i),
+                std::string("R")+etiss::toString(i),
+                etiss::VirtualStruct::Field::R|etiss::VirtualStruct::Field::W|etiss::VirtualStruct::Field::F,
+                4,
+                false,
+                [vcore,i]()
+        {
+            return (uint64_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_rf->rf_a->get_gpr(i));
+        },
+        [vcore,i](uint64_t val)
+        {
+            vcore->v->u_core->or1200_cpu->or1200_rf->rf_a->set_gpr(i,(uint32_t)val);
+        }
+            )
+        );
+
+    }
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "ex_pc",
+            "ex_pc",
+            etiss::VirtualStruct::Field::R|etiss::VirtualStruct::Field::P,
+            4,
+            false,
+            [vcore]()
+    {
+        return (uint32_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_except->get_ex_pc());
+    },
+    0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][17]",
+            "SR",
+            etiss::VirtualStruct::Field::R,
+            4,
+            false,
+            [vcore]()
+    {
+        return (uint32_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_sprs->get_sr());
+    },
+    0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][32]",
+            "EPCR0",
+            etiss::VirtualStruct::Field::R,
+            4,
+            false,
+            [vcore]()
+    {
+        return (uint32_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_sprs->get_epcr());
+    },
+    0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][48]",
+            "EEAR0",
+            etiss::VirtualStruct::Field::R,
+            4,
+            false,
+            [vcore]()
+    {
+        return (uint32_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_sprs->get_eear());
+    },
+    0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][64]",
+            "ESR0",
+            etiss::VirtualStruct::Field::R,
+            4,
+            false,
+            [vcore]()
+    {
+        return (uint32_t) tf::getErrVal(vcore->v->u_core->or1200_cpu->or1200_sprs->get_eear());
+    },
+    0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][0]",
+            "VR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][1]",
+            "UPR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][2]",
+            "CPUCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][3]",
+            "DMMUCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][4]",
+            "IMMUCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][5]",
+            "DCCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][6]",
+            "ICCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][7]",
+            "DCFGR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    /* // currently not used
+    ret->addField(
+            new etiss::VirtualStruct::Field(
+                *ret,
+                "SPR[0][16]",
+                "PC",
+                0,
+    			0
+            )
+        );
+    */
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[0][20]",
+            "FPCSR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    /// ignore GPR to spr mappings
+
+    /// dc disabled -> ignore
+
+    /// ic disabled -> ignore
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[5][1]",
+            "MACLO",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[5][2]",
+            "MACHI",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    /// degub unit disabled -> ignore
+
+    ret->addField( // PMR present? althought powermanagement was disabled
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[8][0]",
+            "PMR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[9][0]",
+            "PICMR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[9][2]",
+            "PICSR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[10][0]",
+            "TTMR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    ret->addField(
+        new etiss::VirtualStruct::Field(
+            *ret,
+            "SPR[10][1]",
+            "TTCR",
+            0,
+            4,
+            false,
+            0,
+            0
+        )
+    );
+
+    for (auto tfb : tfbs){
+    	etiss::VirtualStruct::Field * f = new etiss::VirtualStruct::Field(
+            *ret,
+            tfb->getFullName(),
+            "",
+            etiss::VirtualStruct::Field::R|etiss::VirtualStruct::Field::W|etiss::VirtualStruct::Field::F|etiss::VirtualStruct::Field::P,
+            4,
+            false,
+            [tfb](){ return (uint64_t) tfb->getValues().second;},
+            [tfb](uint64_t val){ tfb->setValues(val,val);}
+        );
+        f->lapplyBitflip = [tfb](unsigned position,uint64_t fault_id){
+        	signal_injected_fault();
+        	tfb->setValues(tfb->getValues().first,tfb->getValues().second^(((uint64_t)1)<<position));
+        	return true;
+        };
+        ret->addField(f);
+    }
+
+    return ret;
+
+}
+
+
+uint16_t getSPRID(const std::string & name,bool & valid)
+{
+
+    ///TODO if full regex support is available (c++11) change this code to use a regex
+
+    const char * cname = name.c_str();
+
+    valid = false;
+
+    if ((cname[0] == 'S') && (cname[1] == 'P') && (cname[2] == 'R') && (cname[3] == '['))
+    {
+        bool dgl = false;
+        unsigned gid = 0;
+        if ( (cname[4] >= '0') && (cname[4] <= '9') )
+        {
+            gid = cname[4]-'0';
+            if ((cname[5] >= '0') && (cname[5] <= '9'))
+            {
+                dgl = true;
+                gid = gid * 10 + (cname[5]-'0');
+            }
+            if ((cname[5+dgl] != ']') || (cname[6+dgl] != '['))
+                return 0;
+            int i = 7+dgl;
+            unsigned id = 0;
+            for (; cname[i] != ']'; ++i)
+            {
+                if (!((cname[i] >= '0') && (cname[i] <= '9')))
+                    return 0;
+                id = id * 10 + (cname[i]-'0');
+            }
+            valid = cname[i+1] == 0;
+            return (uint16_t) ((gid<<11) | (id & 0x7FF));
+        }
+    }
+
+    return 0;
+
+}
+
+}
+
+}
+
+
